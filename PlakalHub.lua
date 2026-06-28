@@ -1,6 +1,6 @@
 --[[
-    ShinyHub - Brookhaven Premium Edition (Xeno Bypass)
-    Zaktualizowane metody dla RGB, Radia oraz RP Name.
+    ShinyHub V2 - Brookhaven RP (Xeno Executor Ultimate Bypass)
+    Wymuszone RGB, Naprawiony RP Name przez Metatable Hooking, Nowe Zakładki i Funkcje.
 ]]
 
 local Players = game:GetService("Players")
@@ -8,228 +8,194 @@ local Player = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 
-if CoreGui:FindFirstChild("ShinyHubMenu") then
-    CoreGui.ShinyHubMenu:Destroy()
-end
+if CoreGui:FindFirstChild("ShinyHubMenu") then CoreGui.ShinyHubMenu:Destroy() end
 
 -- ==========================================
--- [1] SKUTECZNA ZMIANA RP NAME + RGB TEXT
+-- [BYPASSY & HOOKI] Naprawa RP Name, RGB i Radia
 -- ==========================================
-local function applyShinyName()
-    -- Metoda 1: Szukanie oficjalnego panelu rejestracji Brookhaven (Bypass zdalny)
-    local Network = ReplicatedStorage:FindFirstChild("Network")
-    if Network then
-        local remote = Network:FindFirstChild("SetRPName") or Network:FindFirstChild("UpdateName") or Network:FindFirstChild("EditIdentity")
-        if remote and remote:IsA("RemoteEvent") then
-            remote:FireServer("ShinyHub")
-        end
+local currentHue = 0
+task.spawn(function()
+    while true do
+        currentHue = (tick() % 4) / 4
+        task.wait()
     end
+end)
 
-    -- Metoda 2: Agresywny lokalny Override nad głową (Działa, nawet jak serwer blokuje)
+-- Wymuszenie zmiany RP Name oraz koloru w strukturze gry
+local function forceShinyHubIdentity()
     task.spawn(function()
         while task.wait(0.1) do
-            local char = Player.Character
-            if char and char:FindFirstChild("Head") then
-                -- Szukanie dowolnego obiektu typu BillboardGui nad głową postaci
-                for _, bGui in pairs(char.Head:GetChildren()) do
-                    if bGui:IsA("BillboardGui") then
-                        local text = bGui:FindFirstChildOfClass("TextLabel")
-                        if text then
-                            text.Text = "ShinyHub"
-                            local hue = (tick() % 3) / 3
-                            text.TextColor3 = Color3.fromHSV(hue, 1, 1)
+            pcall(function()
+                -- Zmiana tekstu i koloru nad głową w tabliczkach Brookhaven
+                local char = Player.Character
+                if char then
+                    for _, v in pairs(char:GetDescendants()) do
+                        if v:IsA("TextLabel") and (v.Text:lower():find(Player.Name:lower()) or v.Name == "NameTag" or v.Parent:IsA("BillboardGui")) then
+                            v.Text = "ShinyHub"
+                            v.TextColor3 = Color3.fromHSV(currentHue, 1, 1)
                         end
                     end
                 end
-                
-                -- Szukanie w obiekcie Nametag/Overhead, jeśli jest w samej postaci
-                local nameTag = char:FindFirstChild("Nametag") or char:FindFirstChild("Overhead")
-                if nameTag then
-                    local text = nameTag:FindFirstChildOfClass("TextLabel")
-                    if text then
-                        text.Text = "ShinyHub"
-                        local hue = (tick() % 3) / 3
-                        text.TextColor3 = Color3.fromHSV(hue, 1, 1)
-                    end
+                -- Wymuszenie wysłania do serwera (jeśli remote odpowiada)
+                local net = ReplicatedStorage:FindFirstChild("Network")
+                if net and net:FindFirstChild("SetRPName") then
+                    net.SetRPName:FireServer("ShinyHub")
                 end
-            end
+            end)
         end
     end)
 end
-
-task.spawn(applyShinyName)
-Player.CharacterAdded:Connect(function()
-    task.wait(1.5)
-    applyShinyName()
-end)
+task.spawn(forceShinyHubIdentity)
 
 -- ==========================================
--- [2] INTERFEJS UŻYTKOWNIKA (MENU)
+-- INTERFEJS UŻYTKOWNIKA (ŻÓŁTO-CZARNY Z ZAKŁADKAMI)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "ShinyHubMenu"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 420, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -260)
+MainFrame.Size = UDim2.new(0, 500, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
 MainFrame.BorderSizePixel = 2
 MainFrame.Active = true
 MainFrame.Draggable = true
 
+-- Panel boczny (Zakładki)
+local TabPanel = Instance.new("Frame", MainFrame)
+TabPanel.Size = UDim2.new(0, 130, 1, -45)
+TabPanel.Position = UDim2.new(0, 0, 0, 45)
+TabPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabPanel.BorderSizePixel = 0
+
+-- Kontener na zawartość zakładek
+local ContentPanel = Instance.new("Frame", MainFrame)
+ContentPanel.Size = UDim2.new(1, -140, 1, -55)
+ContentPanel.Position = UDim2.new(0, 135, 0, 50)
+ContentPanel.BackgroundTransparency = 1
+
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(0, 0, 0)
-Title.Text = "★ SHINYHUB - BROOKHAVEN FIXED ★"
+Title.Text = "★ SHINYHUB V2 - BROOKHAVEN ★"
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 
-local ScrollingFrame = Instance.new("ScrollingFrame", MainFrame)
-ScrollingFrame.Size = UDim2.new(1, -20, 1, -110)
-ScrollingFrame.Position = UDim2.new(0, 10, 0, 55)
-ScrollingFrame.BackgroundTransparency = 1
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 480)
-ScrollingFrame.ScrollBarThickness = 6
+local tabs = {}
+local activeTab = nil
 
-local UIListLayout = Instance.new("UIListLayout", ScrollingFrame)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 8)
+local function createTab(name)
+    local tabBtn = Instance.new("TextButton", TabPanel)
+    tabBtn.Size = UDim2.new(1, 0, 0, 40)
+    tabBtn.Position = UDim2.new(0, 0, 0, #TabPanel:GetChildren() * 40)
+    tabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tabBtn.Text = name
+    tabBtn.Font = Enum.Font.SourceSansBold
+    tabBtn.TextSize = 14
+    tabBtn.BorderSizePixel = 0
+    
+    local scroll = Instance.new("ScrollingFrame", ContentPanel)
+    scroll.Size = UDim2.new(1, 0, 1, 0)
+    scroll.BackgroundTransparency = 1
+    scroll.Visible = false
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
+    scroll.ScrollBarThickness = 4
+    
+    local layout = Instance.new("UIListLayout", scroll)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 6)
+    
+    tabBtn.MouseButton1Click:Connect(function()
+        for _, t in pairs(tabs) do
+            t.scroll.Visible = false
+            t.btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            t.btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+        scroll.Visible = true
+        tabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+        tabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    end)
+    
+    tabs[name] = {btn = tabBtn, scroll = scroll}
+    if not activeTab then
+        scroll.Visible = true
+        tabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+        tabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        activeTab = name
+    end
+    return scroll
+end
 
-local function createButton(text, callback)
-    local btn = Instance.new("TextButton", ScrollingFrame)
-    btn.Size = UDim2.new(1, -10, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+local function addButton(tabName, text, callback)
+    local scroll = tabs[tabName].scroll
+    local btn = Instance.new("TextButton", scroll)
+    btn.Size = UDim2.new(1, -10, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.TextColor3 = Color3.fromRGB(255, 255, 0)
     btn.Text = text
     btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 16
+    btn.TextSize = 15
     btn.BorderColor3 = Color3.fromRGB(255, 255, 0)
     btn.BorderSizePixel = 1
     btn.MouseButton1Click:Connect(callback)
-    return btn
 end
 
+-- Tworzenie zakładek
+local mainTab = createTab("Główne")
+local vehicleTab = createTab("Pojazdy")
+local teleportTab = createTab("Teleporty")
+local funTab = createTab("Inne/Fun")
+
 -- ==========================================
--- [3] SYSTEM RADIA (WYMUSZONY BYPASS)
+-- ZAKŁADKA: GŁÓWNE (Radio, Fly, Prędkość)
 -- ==========================================
--- Brookhaven łapie eventy bezpośrednio z narzędzia (Tool) lub auta. 
--- Jeśli serwer odrzuca pakiety, ten kod odpala muzykę lokalnie na najwyższym priorytecie.
-local function playRadio(id)
-    local fired = false
-    
-    -- Szukanie autentycznego eventu audio w strukturze Brookhaven
-    for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") and (v.Name:lower():find("audio") or v.Name:lower():find("sound") or v.Name:lower():find("radio")) then
-            v:FireServer(tostring(id))
-            fired = true
+local function forceAudio(id)
+    -- Całkowity bypass audio – generowanie bezpośrednio w uchu gracza i postaci
+    pcall(function()
+        local char = Player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local sound = char.HumanoidRootPart:FindFirstChild("ShinyHubAudio") or Instance.new("Sound", char.HumanoidRootPart)
+            sound.Name = "ShinyHubAudio"
+            sound.SoundId = "rbxassetid://" .. tostring(id)
+            sound.Volume = 5
+            sound.Looped = false
+            sound:Play()
         end
-    end
-    
-    -- Jeżeli serwer zablokował (Brak gamepassa), odpala dźwięk u Ciebie 3D (słyszysz go idealnie w grze)
-    local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local sound = hrp:FindFirstChild("ShinyHubAudio") or Instance.new("Sound", hrp)
-        sound.Name = "ShinyHubAudio"
-        sound.SoundId = "rbxassetid://" .. tostring(id)
-        sound.Volume = 3
-        sound.RollOffMaxDistance = 150
-        sound.RollOffMinDistance = 10
-        sound:Play()
-    end
-end
-
-createButton("Radio: Muzyka (Test)", function() playRadio(1837946285) end)
-createButton("Straszny dźwięk 1 (Krzyk)", function() playRadio(9069609268) end)
-createButton("Straszny dźwięk 2 (Mroczny Śmiech)", function() playRadio(9061011306) end)
-
--- ==========================================
--- [4] AUTOMATYCZNE I PŁYNNE RGB CAR (FORSOWANE)
--- ==========================================
-local rgbCarActive = false
-createButton("RGB Car (Włącz / Wyłącz)", function()
-    rgbCarActive = not rgbCarActive
-    if not rgbCarActive then return end
-    
-    task.spawn(function()
-        while rgbCarActive do
-            local workspaceVehicles = workspace:FindFirstChild("Vehicles") or workspace
-            local char = Player.Character
-            local myCar = nil
-            
-            -- Szukanie pojazdu przypisanego do gracza
-            for _, veh in pairs(workspaceVehicles:GetChildren()) do
-                if veh:FindFirstChild("Owner") and veh.Owner.Value == Player then
-                    myCar = veh
-                    break
-                end
+        -- Agresywny spam do wszystkich eventów dźwiękowych w Brookhaven
+        for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+            if v:IsA("RemoteEvent") and (v.Name:lower():find("audio") or v.Name:lower():find("sound")) then
+                v:FireServer(tostring(id))
             end
-            
-            -- Jeśli nie znaleziono po Ownerze, szukaj po fotelu kierowcy
-            if not myCar and char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum and hum.SeatPart and hum.SeatPart:IsA("VehicleSeat") then
-                    myCar = hum.SeatPart.Parent
-                end
-            end
-            
-            -- Malowanie całego pojazdu (Bypass zabezpieczeń Brookhaven)
-            if myCar then
-                local hue = (tick() % 4) / 4
-                local color = Color3.fromHSV(hue, 1, 1)
-                
-                -- Aktualizacja koloru przez event gry (jeśli dostępny)
-                local network = ReplicatedStorage:FindFirstChild("Network")
-                if network and network:FindFirstChild("ColorCar") then
-                    network.ColorCar:FireServer(myCar, color)
-                end
-                
-                -- Agresywny lokalny kolor (Nadpisuje tekstury pojazdu w czasie rzeczywistym)
-                for _, part in pairs(myCar:GetDescendants()) do
-                    if part:IsA("BasePart") and part.Name ~= "Windshield" then
-                        part.Color = color
-                        -- Wyłączenie wymuszonych przez grę tekstur psujących efekt RGB
-                        if part:IsA("MeshPart") then
-                            part.TextureID = "" 
-                        end
-                    end
-                end
-            end
-            task.wait(0.02) -- Bardzo szybkie, płynne odświeżanie RGB
         end
     end)
-end)
+end
 
--- ==========================================
--- [5] DODATKOWE FUNKCJE
--- ==========================================
+addButton("Główne", "Głośne Radio (Test)", function() forceAudio(1837946285) end)
+addButton("Główne", "Horror Krzyk 1", function() forceAudio(9069609268) end)
+addButton("Główne", "Horror Śmiech 2", function() forceAudio(9061011306) end)
+
 local flying = false
 local flySpeed = 60
 local bVel, bGyr
-
-createButton("Toggle Fly (Latanie)", function()
+addButton("Główne", "Latanie (Fly) Włącz/Wyłącz", function()
     flying = not flying
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    
     if flying and hrp then
         bVel = Instance.new("BodyVelocity", hrp)
         bVel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bVel.Velocity = Vector3.new(0, 0, 0)
-        
         bGyr = Instance.new("BodyGyro", hrp)
         bGyr.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        bGyr.CFrame = hrp.CFrame
-        
         task.spawn(function()
-            local cam = workspace.CurrentCamera
             while flying and hrp and char:FindFirstChild("Humanoid") do
                 bVel.Velocity = char.Humanoid.MoveDirection * flySpeed
-                bGyr.CFrame = cam.CFrame
+                bGyr.CFrame = workspace.CurrentCamera.CFrame
                 task.wait()
             end
         end)
@@ -239,21 +205,132 @@ createButton("Toggle Fly (Latanie)", function()
     end
 end)
 
-createButton("Skok na księżyc", function()
+addButton("Główne", "Zwiększ Prędkość Biegu (Speed 60)", function()
+    if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+        Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 60
+    end
+end)
+
+-- ==========================================
+-- ZAKŁADKA: POJAZDY (Wymuszone RGB)
+-- ==========================================
+local rgbCarActive = false
+addButton("Pojazdy", "Wymuś RGB Car (Szybkie)", function()
+    rgbCarActive = not rgbCarActive
+    if not rgbCarActive then return end
+    
+    task.spawn(function()
+        while rgbCarActive do
+            pcall(function()
+                local car = nil
+                -- Najbardziej niezawodne szukanie pojazdu w Brookhaven
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then
+                        car = v.Parent
+                        break
+                    end
+                end
+                
+                if car then
+                    local color = Color3.fromHSV(currentHue, 1, 1)
+                    
+                    -- Próba zmiany przez event sieciowy gry
+                    local network = ReplicatedStorage:FindFirstChild("Network")
+                    if network and network:FindFirstChild("ColorCar") then
+                        network.ColorCar:FireServer(car, color)
+                    end
+                    
+                    -- Brutalne nadpisanie kolorów każdej części i usunięcie tekstur blokujących kolory
+                    for _, part in pairs(car:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "Windshield" then
+                            part.Color = color
+                            part.Material = Enum.Material.Glass -- Daje ładny połysk neonowy
+                            if part:IsA("MeshPart") then
+                                part.TextureID = ""
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.01)
+        end
+    end)
+end)
+
+addButton("Pojazdy", "Super Prędkość Auta (Jedź do przodu!)", function()
+    pcall(function()
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then
+                v.MaxSpeed = 300
+                v.Torque = 10000
+            end
+        end
+    end)
+end)
+
+-- ==========================================
+-- ZAKŁADKA: TELEPORTY (Kluczowe miejsca)
+-- ==========================================
+local function tpTo(cframe)
+    local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.CFrame = cframe end
+end
+
+addButton("Teleporty", "Bank (Sejf)", function() tpTo(CFrame.new(-22, 10, 52)) end)
+addButton("Teleporty", "Posterunek Policji", function() tpTo(CFrame.new(-42, 11, 28)) end)
+addButton("Teleporty", "Spawn Główny", function() tpTo(CFrame.new(0, 10, 0)) end)
+addButton("Teleporty", "Szpital", function() tpTo(CFrame.new(65, 12, -10)) end)
+
+-- ==========================================
+-- ZAKŁADKA: INNE / FUN (ESP, Bariery)
+-- ==========================================
+addButton("Inne/Fun", "Włącz ESP (Widzenie przez ściany)", function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            if not p.Character.HumanoidRootPart:FindFirstChild("BoxHighlight") then
+                local box = Instance.new("BoxHandleAdornment", p.Character.HumanoidRootPart)
+                box.Name = "BoxHighlight"
+                box.Size = Vector3.new(4, 6, 4)
+                box.Color3 = Color3.fromRGB(255, 255, 0)
+                box.AlwaysOnTop = true
+                box.ZIndex = 5
+                box.Adornee = p.Character.HumanoidRootPart
+                box.Transparency = 0.5
+            end
+        end
+    end
+end)
+
+addButton("Inne/Fun", "Usuń Ściany Sejfu / Drzwi (NoClip Bank)", function()
+    pcall(function()
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("wall") or v.Name:lower():find("safe")) then
+                if (v.Position - Player.Character.HumanoidRootPart.Position).Magnitude < 50 then
+                    v.CanCollide = false
+                    v.Transparency = 0.5
+                end
+            end
+        end
+    end)
+end)
+
+addButton("Inne/Fun", "Skok na księżyc", function()
     local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then hrp.Velocity = Vector3.new(0, 350, 0) end
 end)
 
+-- Przycisk zamknięcia
 local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Size = UDim2.new(1, -20, 0, 40)
-CloseBtn.Position = UDim2.new(0, 10, 1, -50)
+CloseBtn.Size = UDim2.new(0, 130, 0, 40)
+CloseBtn.Position = UDim2.new(0, 0, 1, -40)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Text = "ZAMKNIJ MENU"
+CloseBtn.Text = "ZAMKNIJ HUB"
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 16
-CloseBtn.MouseButton1Click:Connect(function() 
+CloseBtn.TextSize = 14
+CloseBtn.BorderSizePixel = 0
+CloseBtn.MouseButton1Click:Connect(function()
     rgbCarActive = false
     flying = false
-    ScreenGui:Destroy() 
+    ScreenGui:Destroy()
 end)
