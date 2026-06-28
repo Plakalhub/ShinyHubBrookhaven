@@ -3,16 +3,8 @@
 -- Autor: palofsc
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
-local Window = Library.CreateLib("PłakałHub", "DarkTheme")
-
--- WYMUSZENIE KOLORÓW (Ożywiamy menu bezpośrednio przez silnik UI)
-local ColorProvider = game:GetService("HttpService") -- Bezpieczny fallback
-pcall(function()
-    Library:ChangeColor("BackgroundColor", Color3.fromRGB(20, 20, 20))  -- Ciemne, czyste tło zamiast szarego
-    Library:ChangeColor("TextColor", Color3.fromRGB(255, 255, 255))      -- Jasny, wyraźny tekst
-    Library:ChangeColor("MainColor", Color3.fromRGB(255, 0, 75))         -- Neonowy czerwony dla przycisków i akcentów
-    Library:ChangeColor("MinorColor", Color3.fromRGB(15, 15, 15))        -- Głęboka czerń dla sekcji
-end)
+-- Zmiana z nudnego "DarkTheme" na "Grape" (żywy, fioletowo-neonowy motyw, który nie sypie błędami)
+local Window = Library.CreateLib("PłakałHub", "Grape")
 
 -- Rejestracja Zakładek
 local MainTab = Window:NewTab("Główne")
