@@ -2,7 +2,7 @@
 -- Wersja: 1.0
 -- Autor: palofsc
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
 local Window = Library.CreateLib("PłakałHub", "DarkTheme")
 
 -- Rejestracja Zakładek
