@@ -3,7 +3,16 @@
 -- Autor: palofsc
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
-local Window = Library.CreateLib("PłakałHub", "DarkTheme")
+-- Zmiana motywu na BloodTheme oraz dodanie własnych, żywych kolorów (RGB/Neon)
+local Window = Library.CreateLib("PłakałHub", "BloodTheme")
+
+-- Personalizacja kolorów UI (zamiana nudnej szarości na żywy czerwony akcent i głęboką czerń)
+local colors = {
+    TextColor = Color3.fromRGB(255, 255, 255),       -- Biały tekst
+    MainColor = Color3.fromRGB(20, 20, 20),          -- Ciemne, eleganckie tło
+    AccentColor = Color3.fromRGB(255, 0, 50),        -- Żywy, neonowy czerwony akcent
+    BackgroundColor = Color3.fromRGB(15, 15, 15)     -- Głęboka czerń sekcji
+}
 
 -- Rejestracja Zakładek
 local MainTab = Window:NewTab("Główne")
@@ -17,6 +26,7 @@ local TeleportSection = TeleportTab:NewSection("Miejsca")
 
 local MiscTab = Window:NewTab("Różne")
 local MiscSection = MiscTab:NewSection("Inne")
+local CarSection = MiscTab:NewSection("Opcje Auta")
 
 -- Główne
 MainSection:NewButton("Zabij wszystkich", "Zdejmuje HP innym graczom", function()
@@ -51,6 +61,21 @@ MainSection:NewToggle("Auto-farma pieniędzy", "Zbiera kasę", function(state)
     end)
 end)
 
+-- Wybór i odtwarzanie Radio ID (Wymaga Gamepassa)
+local currentRadioID = ""
+MainSection:NewTextBox("Wpisz Radio ID", "Tutaj wpisz ID muzyki z Roblox", function(text)
+    currentRadioID = text
+end)
+
+MainSection:NewButton("Odtwórz Radio ID", "Puszcza muzykę dla całego serwera", function()
+    local reStorage = game:GetService("ReplicatedStorage")
+    local passEvent = reStorage:FindFirstChild("Content") and reStorage.Content:FindFirstChild("EquipGamepass")
+    
+    if passEvent and currentRadioID ~= "" then
+        passEvent:FireServer("Radio", currentRadioID)
+    end
+end)
+
 -- Gracz
 PlayerSection:NewSlider("Prędkość", "Zmienia szybkość", 500, 16, function(value)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -63,6 +88,72 @@ PlayerSection:NewSlider("Skok", "Zmienia siłę skoku", 500, 50, function(value)
     local char = game:GetService("Players").LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
         char.Humanoid.JumpPower = value
+    end
+end)
+
+-- Latanie (Fly)
+PlayerSection:NewToggle("Latanie (Fly)", "Pozwala latać postacią", function(state)
+    getgenv().Fly = state
+    local player = game:GetService("Players").LocalPlayer
+    
+    if state then
+        task.spawn(function()
+            local char = player.Character or player.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            local humanoid = char:WaitForChild("Humanoid")
+            
+            if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+            if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+            
+            local bv = Instance.new("BodyVelocity")
+            bv.Name = "FlyBV"
+            bv.MaxForce = Vector3.new(0, 0, 0)
+            bv.Velocity = Vector3.new(0, 0, 0)
+            bv.Parent = hrp
+            
+            local bg = Instance.new("BodyGyro")
+            bg.Name = "FlyBG"
+            bg.MaxTorque = Vector3.new(0, 0, 0)
+            bg.CFrame = hrp.CFrame
+            bg.Parent = hrp
+            
+            humanoid.PlatformStand = true
+            local camera = workspace.CurrentCamera
+            
+            while getgenv().Fly and char and parent ~= nil do
+                bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+                bg.CFrame = camera.CFrame
+                
+                local moveDirection = humanoid.MoveDirection
+                local uis = game:GetService("UserInputService")
+                local up = uis:IsKeyDown(Enum.KeyCode.Space) and 1 or 0
+                local down = uis:IsKeyDown(Enum.KeyCode.LeftShift) and -1 or 0
+                
+                local speed = char.Humanoid.WalkSpeed
+                bv.Velocity = (moveDirection * speed) + Vector3.new(0, (up + down) * speed, 0)
+                task.wait()
+            end
+            
+            if bv then bv:Destroy() end
+            if bg then bg:Destroy() end
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.PlatformStand = false
+            end
+        end)
+    else
+        local char = player.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char:FindFirstChild("Humanoid")
+            if hrp then
+                if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+                if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+            end
+            if humanoid then
+                humanoid.PlatformStand = false
+            end
+        end
     end
 end)
 
@@ -106,5 +197,41 @@ MiscSection:NewButton("Nieśmiertelność (Lokalna)", "Nieskończone HP", functi
     if char and char:FindFirstChild("Humanoid") then
         char.Humanoid.MaxHealth = math.huge
         char.Humanoid.Health = math.huge
+    end
+end)
+
+-- Płynne RGB dla auta (Czerwony <-> Czarny)
+CarSection:NewToggle("Płynne RGB Auta", "Zmienia kolor auta (Czerwony-Czarny)", function(state)
+    getgenv().RGBVehicle = state
+    
+    if state then
+        task.spawn(function()
+            local reStorage = game:GetService("ReplicatedStorage")
+            local carEvent = reStorage:FindFirstChild("RE") and reStorage.RE:FindFirstChild("1_v_c_c") 
+            
+            local colorStart = Color3.fromRGB(255, 0, 0)
+            local colorEnd = Color3.fromRGB(0, 0, 0)
+            local t = 0
+            local direction = 1
+            
+            while getgenv().RGBVehicle do
+                t = t + (0.05 * direction)
+                if t >= 1 then
+                    t = 1
+                    direction = -1
+                elseif t <= 0 then
+                    t = 0
+                    direction = 1
+                end
+                
+                local currentColor = colorStart:lerp(colorEnd, t)
+                
+                if carEvent then
+                    carEvent:FireServer("Color", currentColor)
+                end
+                
+                task.wait(0.1)
+            end
+        end)
     end
 end)
