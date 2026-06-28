@@ -2,9 +2,9 @@
 -- Wersja: 1.0
 -- Autor: palofsc
 
--- Twój oryginalny loadstring przywrócony:
+-- Twój oryginalny link ładowany jako czysta biblioteka
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
--- Użycie wbudowanego, bezpiecznego motywu "Sentinel" (Czerwień i Czerń zamiast szarości)
+-- Zmiana motywu na "Sentinel" (bardzo żywy, czarno-czerwony neon, brak szarości)
 local Window = Library.CreateLib("PłakałHub", "Sentinel")
 
 -- Rejestracja Zakładek
@@ -113,7 +113,7 @@ PlayerSection:NewToggle("Latanie (Fly)", "Pozwala latać postacią", function(st
             humanoid.PlatformStand = true
             local camera = workspace.CurrentCamera
             
-            while getgenv().Fly and char and parent ~= nil do
+            while getgenv().Fly and char and char.Parent ~= nil do
                 bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
                 bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
                 bg.CFrame = camera.CFrame
