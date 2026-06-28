@@ -1,118 +1,135 @@
--- PłakałHub dla Brookhaven
--- Wersja: 1.2 (Zabezpieczona przed aktualizacjami Brookhaven)
--- Autor: palofsc
+--[[
+  Skrypt do Brookhaven RP (Xeno executor)
+  Funkcje: radio (ID), straszne dźwięki, fly, RGB car (płynne przejścia), zmiana nicku na ShinyHub z RGB, menu żółto-czarne.
+  Uwaga: wymagany gamepass do radia z własnymi ID.
+]]
+local Player = game:GetService("Players").LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
--- Pobieramy oficjalną, stabilną bibliotekę Kavo UI
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
--- Od razu ładujemy jaskrawy, czrowno-czarny motyw "Sentinel" zamiast szarości
-local Window = Library.CreateLib("PłakałHub", "Sentinel")
-
--- Rejestracja Zakładek
-local MainTab = Window:NewTab("Główne")
-local MainSection = MainTab:NewSection("Opcje Główne")
-
-local PlayerTab = Window:NewTab("Gracz")
-local PlayerSection = PlayerTab:NewSection("Opcje Gracza")
-
-local TeleportTab = Window:NewTab("Teleport")
-local TeleportSection = TeleportTab:NewSection("Miejsca")
-
-local MiscTab = Window:NewTab("Różne")
-local MiscSection = MiscTab:NewSection("Inne")
-
--- ==========================================
--- GŁÓWNE (Bezpieczne opcje)
--- ==========================================
-MainSection:NewButton("Zabij wszystkich", "Zdejmuje HP innym graczom", function()
-    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        if player ~= game:GetService("Players").LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
-            player.Character.Humanoid.Health = 0
-        end
+-- Zmiana nicku na ShinyHub z RGB
+local function changeName()
+    local nametag = Player.Character and Player.Character:FindFirstChild("Nametag")
+    if nametag then
+        nametag.Text = "ShinyHub"
+        spawn(function()
+            while wait(0.1) do
+                local hue = tick() % 6 / 6
+                local color = Color3.fromHSV(hue, 1, 1)
+                nametag.TextColor3 = color
+            end
+        end)
     end
+end
+Player.CharacterAdded:Connect(function(char)
+    repeat wait() until char:FindFirstChild("Nametag")
+    changeName()
+end)
+if Player.Character then changeName() end
+
+-- Menu (żółto-czarne)
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "ShinyHubMenu"
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 400, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+MainFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 2
+MainFrame.Active = true
+MainFrame.Draggable = true
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Title.TextColor3 = Color3.fromRGB(255, 255, 0)
+Title.Text = "ShinyHub - Brookhaven"
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 24
+Title.Position = UDim2.new(0, 0, 0, 0)
+-- Przyciski
+local function createButton(text, position, callback)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = UDim2.new(0.05, 0, position, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 0)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 20
+    btn.BorderColor3 = Color3.fromRGB(255, 255, 0)
+    btn.BorderSizePixel = 2
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- Radio (wymagany gamepass)
+local function playRadio(id)
+    local radio = Player.Character and Player.Character:FindFirstChild("Radio")
+    if radio then
+        radio:Play(id) -- id jako string lub number
+    end
+end
+createButton("Radio ID", 0.1, function()
+    local id = "1234567890" -- domyślne ID, można zmienić
+    playRadio(id)
+end)
+createButton("Straszny dźwięk 1", 0.2, function()
+    playRadio("1234567891") -- przykładowe ID straszne
+end)
+createButton("Straszny dźwięk 2", 0.25, function()
+    playRadio("1234567892")
 end)
 
-MainSection:NewButton("Wysadź wszystkich", "Tworzy eksplozję", function()
-    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        if player ~= game:GetService("Players").LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local explosion = Instance.new("Explosion")
-            explosion.Position = player.Character.HumanoidRootPart.Position
-            explosion.Parent = workspace
+-- Fly
+local flying = false
+local bodyVelocity
+local function toggleFly()
+    flying = not flying
+    if flying then
+        local char = Player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            bodyVelocity = Instance.new("BodyVelocity", char.HumanoidRootPart)
+            bodyVelocity.Velocity = Vector3.new(0, 50, 0)
+            bodyVelocity.MaxForce = Vector3.new(1, 1, 1) * 10000
         end
+    else
+        if bodyVelocity then bodyVelocity:Destroy() end
     end
-end)
+end
+createButton("Fly", 0.3, toggleFly)
 
-MainSection:NewToggle("Auto-farma pieniędzy", "Zbiera kasę", function(state)
-    getgenv().AutoFarm = state
-    task.spawn(function()
-        while getgenv().AutoFarm do
-            pcall(function()
-                local reStorage = game:GetService("ReplicatedStorage")
-                local events = reStorage:FindFirstChild("Events")
-                if events and events:FindFirstChild("GiveMoney") then
-                    events.GiveMoney:FireServer(1000)
+-- RGB Car (płynne przejścia kolorów)
+local function rgbCar()
+    local vehicle = Player.Character and Player.Character:FindFirstChildOfClass("VehicleSeat")
+    if vehicle and vehicle.Parent then
+        local car = vehicle.Parent
+        spawn(function()
+            while wait(0.1) do
+                local hue = tick() % 6 / 6
+                local color = Color3.fromHSV(hue, 1, 1)
+                for _, part in pairs(car:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        TweenService:Create(part, TweenInfo.new(0.1), {Color = color}):Play()
+                    end
                 end
-            end)
-            task.wait(0.5)
-        end
-    end)
-end)
-
--- ==========================================
--- GRACZ
--- ==========================================
-PlayerSection:NewSlider("Prędkość", "Zmienia szybkość", 500, 16, function(value)
-    local char = game:GetService("Players").LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.WalkSpeed = value
+            end
+        end)
     end
-end)
+end
+createButton("RGB Car", 0.35, rgbCar)
 
-PlayerSection:NewSlider("Skok", "Zmienia siłę skoku", 500, 50, function(value)
-    local char = game:GetService("Players").LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.JumpPower = value
-    end
-end)
-
--- ==========================================
--- TELEPORT
--- ==========================================
-TeleportSection:NewButton("Teleport do banku", "Bank", function()
-    local char = game:GetService("Players").LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(100, 20, 200)
-    end
-end)
-
-TeleportSection:NewButton("Teleport do policji", "Policja", function()
-    local char = game:GetService("Players").LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(-50, 20, 300)
-    end
-end)
-
--- ==========================================
--- RÓŻNE (Zabezpieczone pcall)
--- ==========================================
-MiscSection:NewButton("ESP (Przez ściany)", "Pokazuje graczy", function()
-    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        if player ~= game:GetService("Players").LocalPlayer and player.Character then
-            local oldHighlight = player.Character:FindFirstChild("EspHighlight")
-            if oldHighlight then oldHighlight:Destroy() end
-
-            local highlight = Instance.new("Highlight")
-            highlight.Name = "EspHighlight"
-            highlight.Parent = player.Character
-            highlight.FillColor = Color3.new(1, 0, 0)
-            highlight.OutlineColor = Color3.new(1, 1, 1)
-        end
-    end
-end)
-
-MiscSection:NewButton("Nieśmiertelność", "Nieskończone HP", function()
-    local char = game:GetService("Players").LocalPlayer.Character
+-- Dodatkowe opcje
+createButton("Nieskończona energia", 0.4, function()
+    local char = Player.Character
     if char and char:FindFirstChild("Humanoid") then
         char.Humanoid.MaxHealth = math.huge
-        char.Humanoid.Health = math.huge
     end
 end)
+createButton("Skok na księżyc", 0.45, function()
+    local char = Player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.Velocity = Vector3.new(0, 500, 0)
+    end
+end)
+createButton("Zamknij", 0.9, function() ScreenGui:Destroy() end)
