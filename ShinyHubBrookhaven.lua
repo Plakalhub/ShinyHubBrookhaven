@@ -1,6 +1,6 @@
 --[[
     ShinyHub V4 - Brookhaven RP (Xeno Executor)
-    Dodano: RGB Car (Gamepass Only), Jerk Tool z animacją, Prawdziwy Noclip, Poprawione Bronie.
+    Dodano: L-Tool, Scuba-Tool, RGB Car (Gamepass), Noclip, Slidery, Gatling Tools.
 ]]
 
 local Players = game:GetService("Players")
@@ -131,7 +131,8 @@ local function addSlider(tabName, text, min, max, default, callback)
     label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     
-    local track = Instance.new("Frame", sliderFrame)
+    local track = Instance.new("Frame", track)
+    track = Instance.new("Frame", sliderFrame)
     track.Size = UDim2.new(1, 0, 0, 10)
     track.Position = UDim2.new(0, 0, 0, 25)
     track.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -167,7 +168,7 @@ end
 local mainTab = createTab("Ruch")
 local combatTab = createTab("Bronie")
 local vehicleTab = createTab("Pojazdy")
-local funTab = createTab("Trolle")
+local funTab = createTab("Animacje / Trolle")
 
 -- ==========================================
 -- ZAKŁADKA: RUCH (Suwaki, Fly, Noclip)
@@ -224,11 +225,10 @@ addButton("Ruch", "Latanie (Fly)", function()
 end)
 
 -- ==========================================
--- ZAKŁADKA: BRONIE (Naprawiony Ekwipunek)
+-- ZAKŁADKA: BRONIE (Ekwipunek)
 -- ==========================================
 addButton("Bronie", "Daj Wszystkie Bronie i Przedmioty", function()
     pcall(function()
-        -- Bezpośrednie pobieranie z zarejestrowanych kontenerów przedmiotów Brookhaven
         local items = ReplicatedStorage:FindFirstChild("Tools") or ReplicatedStorage:FindFirstChild("Items") or ReplicatedStorage
         for _, obj in pairs(items:GetDescendants()) do
             if obj:IsA("Tool") then
@@ -236,7 +236,6 @@ addButton("Bronie", "Daj Wszystkie Bronie i Przedmioty", function()
                 clone.Parent = Player.Backpack
             end
         end
-        -- Alternatywne pobieranie z Inventory gry
         local playerGui = Player:FindFirstChildOfClass("PlayerGui")
         if playerGui and playerGui:FindFirstChild("Inventory") then
             for _, item in pairs(playerGui.Inventory:GetDescendants()) do
@@ -268,7 +267,7 @@ addButton("Bronie", "Gatling Mode (Szybkie Miganie Broni)", function()
 end)
 
 -- ==========================================
--- ZAKŁADKA: POJAZDY (Działające RGB)
+-- ZAKŁADKA: POJAZDY (Działające RGB z GP)
 -- ==========================================
 local rgbCarActive = false
 addButton("Pojazdy", "RGB Car (GAMEPASS ONLY)", function()
@@ -288,7 +287,6 @@ addButton("Pojazdy", "RGB Car (GAMEPASS ONLY)", function()
                 
                 if car then
                     local color = Color3.fromHSV(currentHue, 1, 1)
-                    -- Wywołanie oficjalnego eventu sieciowego Brookhaven z Gamepassa tuningu:
                     local network = ReplicatedStorage:FindFirstChild("Network")
                     if network and network:FindFirstChild("ColorCar") then
                         network.ColorCar:FireServer(car, color)
@@ -301,30 +299,48 @@ addButton("Pojazdy", "RGB Car (GAMEPASS ONLY)", function()
 end)
 
 -- ==========================================
--- ZAKŁADKA: TROLLE (Jerk Tool)
+-- ZAKŁADKA: ANIMACJE / TROLLE (Jerk, L-Tool, Scuba)
 -- ==========================================
-addButton("Trolle", "Daj Jerk Tool", function()
-    local jerkTool = Instance.new("Tool")
-    jerkTool.Name = "Jerk Tool"
-    jerkTool.RequiresHandle = false
-    jerkTool.Parent = Player.Backpack
-    
+addButton("Animacje / Trolle", "Daj Jerk Tool", function()
+    local tool = Instance.new("Tool", Player.Backpack)
+    tool.Name = "Jerk Tool"
+    tool.RequiresHandle = false
     local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://148840371" -- Działająca, klasyczna śmieszna animacja ruchu rąk
-    
+    anim.AnimationId = "rbxassetid://148840371"
     local track
-    jerkTool.Equipped:Connect(function()
+    tool.Equipped:Connect(function()
         local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            track = hum:LoadAnimation(anim)
-            track.Looped = true
-            track:Play()
-        end
+        if hum then track = hum:LoadAnimation(anim); track.Looped = true; track:Play() end
     end)
-    
-    jerkTool.Unequipped:Connect(function()
-        if track then track:Stop() end
+    tool.Unequipped:Connect(function() if track then track:Stop() end end)
+end)
+
+addButton("Animacje / Trolle", "Daj L-Tool (Take the L)", function()
+    local tool = Instance.new("Tool", Player.Backpack)
+    tool.Name = "L-Tool"
+    tool.RequiresHandle = false
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://4295417122" -- Oficjalny taniec L (Emote)
+    local track
+    tool.Equipped:Connect(function()
+        local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then track = hum:LoadAnimation(anim); track.Looped = true; track:Play() end
     end)
+    tool.Unequipped:Connect(function() if track then track:Stop() end end)
+end)
+
+addButton("Animacje / Trolle", "Daj ScubaTool (Scuba Dance)", function()
+    local tool = Instance.new("Tool", Player.Backpack)
+    tool.Name = "ScubaTool"
+    tool.RequiresHandle = false
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://16124192661" -- Viralowy i aktualny trend Scuba Dance
+    local track
+    tool.Equipped:Connect(function()
+        local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then track = hum:LoadAnimation(anim); track.Looped = true; track:Play() end
+    end)
+    tool.Unequipped:Connect(function() if track then track:Stop() end end)
 end)
 
 -- Przycisk Zamknij
