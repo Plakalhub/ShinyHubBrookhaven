@@ -3,7 +3,7 @@
 -- Autor: palofsc
 
 -- Pobieramy oficjalną, stabilną bibliotekę Kavo UI
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
 -- Od razu ładujemy jaskrawy, czrowno-czarny motyw "Sentinel" zamiast szarości
 local Window = Library.CreateLib("PłakałHub", "Sentinel")
 
