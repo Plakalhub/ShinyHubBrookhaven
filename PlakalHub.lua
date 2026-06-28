@@ -1,19 +1,63 @@
 -- PłakałHub dla Brookhaven
--- Wersja: 1.0
+-- Wersja: 1.1
 -- Autor: palofsc
 
--- Ładujemy Twój skrypt (On już sam tworzy okno i sekcje, więc NIE dodajemy tu Library.CreateLib!)
+-- TUTAJ JEST TWÓJ LINK - Ładuje czystą bazę z Twojego repozytorium:
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
 
--- Rejestracja dodatkowej sekcji dla auta w zakładce Różne (MiscTab/MiscSection są już stworzone w Twoim pliku)
--- Uwaga: Jeśli Kavo sypie błędem przy tworzeniu nowej sekcji, wrzucamy opcję RGB prosto do istniejącej MiscSection
-local CarSection = MiscSection
+-- Użycie motywu "Sentinel" (Czarno-czerwony neon, żeby menu nie było szaro-bure)
+local Window = Library.CreateLib("PłakałHub", "Sentinel")
+
+-- Rejestracja Zakładek
+local MainTab = Window:NewTab("Główne")
+local MainSection = MainTab:NewSection("Opcje Główne")
+
+local PlayerTab = Window:NewTab("Gracz")
+local PlayerSection = PlayerTab:NewSection("Opcje Gracza")
+
+local TeleportTab = Window:NewTab("Teleport")
+local TeleportSection = TeleportTab:NewSection("Miejsca")
+
+local MiscTab = Window:NewTab("Różne")
+local MiscSection = MiscTab:NewSection("Inne")
+local CarSection = MiscTab:NewSection("Opcje Auta")
 
 -- ==========================================
--- DOPISYWANIE NOWYCH FUNKCJI DO TWOICH ZAKŁADEK
+-- GŁÓWNE
 -- ==========================================
+MainSection:NewButton("Zabij wszystkich", "Zdejmuje HP innym graczom", function()
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game:GetService("Players").LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.Health = 0
+        end
+    end
+end)
 
--- 1. NOWA OPCJA: Wybór i odtwarzanie Radio ID (Dodawane do Twojej sekcji Główne)
+MainSection:NewButton("Wysadź wszystkich", "Tworzy eksplozję", function()
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game:GetService("Players").LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local explosion = Instance.new("Explosion")
+            explosion.Position = player.Character.HumanoidRootPart.Position
+            explosion.Parent = workspace
+        end
+    end
+end)
+
+MainSection:NewToggle("Auto-farma pieniędzy", "Zbiera kasę", function(state)
+    getgenv().AutoFarm = state
+    task.spawn(function()
+        while getgenv().AutoFarm do
+            local reStorage = game:GetService("ReplicatedStorage")
+            local events = reStorage:FindFirstChild("Events")
+            if events and events:FindFirstChild("GiveMoney") then
+                events.GiveMoney:FireServer(1000)
+            end
+            task.wait(0.5)
+        end
+    end)
+end)
+
+-- Radio ID (Wymaga Gamepassa)
 local currentRadioID = ""
 MainSection:NewTextBox("Wpisz Radio ID", "Tutaj wpisz ID muzyki z Roblox", function(text)
     currentRadioID = text
@@ -28,7 +72,24 @@ MainSection:NewButton("Odtwórz Radio ID", "Puszcza muzykę dla całego serwera"
     end
 end)
 
--- 2. NOWA OPCJA: Latanie (Fly) (Dodawane do Twojej sekcji Gracz)
+-- ==========================================
+-- GRACZ
+-- ==========================================
+PlayerSection:NewSlider("Prędkość", "Zmienia szybkość", 500, 16, function(value)
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = value
+    end
+end)
+
+PlayerSection:NewSlider("Skok", "Zmienia siłę skoku", 500, 50, function(value)
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.JumpPower = value
+    end
+end)
+
+-- Latanie (Fly)
 PlayerSection:NewToggle("Latanie (Fly)", "Pozwala latać postacią", function(state)
     getgenv().Fly = state
     local player = game:GetService("Players").LocalPlayer
@@ -94,7 +155,54 @@ PlayerSection:NewToggle("Latanie (Fly)", "Pozwala latać postacią", function(st
     end
 end)
 
--- 3. NOWA OPCJA: Płynne RGB dla auta (Dodawane do Twojej sekcji Różne)
+-- ==========================================
+-- TELEPORT
+-- ==========================================
+TeleportSection:NewButton("Teleport do banku", "Bank", function()
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(100, 20, 200)
+    end
+end)
+
+TeleportSection:NewButton("Teleport do policji", "Policja", function()
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(-50, 20, 300)
+    end
+end)
+
+-- ==========================================
+-- RÓŻNE
+-- ==========================================
+MiscSection:NewButton("ESP (Przez ściany)", "Pokazuje graczy", function()
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game:GetService("Players").LocalPlayer and player.Character then
+            local oldHighlight = player.Character:FindFirstChild("EspHighlight")
+            if oldHighlight then oldHighlight:Destroy() end
+
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "EspHighlight"
+            highlight.Parent = player.Character
+            highlight.FillColor = Color3.new(1, 0, 0)
+            highlight.OutlineColor = Color3.new(1, 1, 1)
+        end
+    end
+end)
+
+MiscSection:NewButton("Usuń mgłę", "Czyste niebo", function()
+    game:GetService("Lighting").FogEnd = 1e5
+end)
+
+MiscSection:NewButton("Nieśmiertelność (Lokalna)", "Nieskończone HP", function()
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.MaxHealth = math.huge
+        char.Humanoid.Health = math.huge
+    end
+end)
+
+-- Płynne RGB dla auta (Czerwony <-> Czarny)
 CarSection:NewToggle("Płynne RGB Auta", "Zmienia kolor auta (Czerwony-Czarny)", function(state)
     getgenv().RGBVehicle = state
     
