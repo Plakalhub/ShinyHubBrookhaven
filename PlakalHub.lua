@@ -2,9 +2,10 @@
 -- Wersja: 1.0
 -- Autor: palofsc
 
+-- Twój oryginalny loadstring przywrócony:
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Plakalhub/PlakalHubBrookHaven/refs/heads/main/PlakalHub.lua"))()
--- Zmiana z nudnego "DarkTheme" na "Grape" (żywy, fioletowo-neonowy motyw, który nie sypie błędami)
-local Window = Library.CreateLib("PłakałHub", "Grape")
+-- Użycie wbudowanego, bezpiecznego motywu "Sentinel" (Czerwień i Czerń zamiast szarości)
+local Window = Library.CreateLib("PłakałHub", "Sentinel")
 
 -- Rejestracja Zakładek
 local MainTab = Window:NewTab("Główne")
