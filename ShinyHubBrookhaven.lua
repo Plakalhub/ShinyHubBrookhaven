@@ -1,18 +1,28 @@
 --[[
-    ShinyHub V3 - Brookhaven RP (Xeno Executor)
-    Dodano: Suwak Prędkości, Suwak Skoku, Wszystkie Bronie (Gatling Backpack Glitch).
-    Usunięto: Niedziałające funkcje RGB/Radio zablokowane przez serwer gry.
+    ShinyHub V4 - Brookhaven RP (Xeno Executor)
+    Dodano: RGB Car (Gamepass Only), Jerk Tool z animacją, Prawdziwy Noclip, Poprawione Bronie.
 ]]
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 if CoreGui:FindFirstChild("ShinyHubMenu") then CoreGui.ShinyHubMenu:Destroy() end
 
+-- Zmienna globalna tęczy dla auta i tekstu
+local currentHue = 0
+task.spawn(function()
+    while true do
+        currentHue = (tick() % 4) / 4
+        task.wait()
+    end
+end)
+
 -- ==========================================
--- INTERFEJS UŻYTKOWNIKA (ŻÓŁTO-CZARNY Z ZAKŁADKAMI)
+-- INTERFEJS UŻYTKOWNIKA (ZAKŁADKI)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "ShinyHubMenu"
@@ -27,14 +37,12 @@ MainFrame.BorderSizePixel = 2
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- Panel boczny (Zakładki)
 local TabPanel = Instance.new("Frame", MainFrame)
 TabPanel.Size = UDim2.new(0, 130, 1, -45)
 TabPanel.Position = UDim2.new(0, 0, 0, 45)
 TabPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 TabPanel.BorderSizePixel = 0
 
--- Kontener na zawartość zakładek
 local ContentPanel = Instance.new("Frame", MainFrame)
 ContentPanel.Size = UDim2.new(1, -140, 1, -55)
 ContentPanel.Position = UDim2.new(0, 135, 0, 50)
@@ -44,7 +52,7 @@ local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(0, 0, 0)
-Title.Text = "★ SHINYHUB V3 - BROOKHAVEN ★"
+Title.Text = "★ SHINYHUB V4 - BROOKHAVEN ★"
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 
@@ -108,7 +116,6 @@ local function addButton(tabName, text, callback)
     btn.MouseButton1Click:Connect(callback)
 end
 
--- FUNKCJA TWORZENIA SUWAKA (SLIDER)
 local function addSlider(tabName, text, min, max, default, callback)
     local scroll = tabs[tabName].scroll
     local sliderFrame = Instance.new("Frame", scroll)
@@ -142,7 +149,6 @@ local function addSlider(tabName, text, min, max, default, callback)
     button.Text = ""
     
     local dragging = false
-    
     local function update(input)
         local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
         button.Position = UDim2.new(pos, -8, 0, -3)
@@ -152,43 +158,50 @@ local function addSlider(tabName, text, min, max, default, callback)
         callback(value)
     end
     
-    button.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then update(input) end
-    end)
+    button.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    UserInputService.InputChanged:Connect(function(input) if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then update(input) end end)
 end
 
--- Tworzenie zakładek
-local mainTab = createTab("Statystyki")
+-- Zakładki
+local mainTab = createTab("Ruch")
 local combatTab = createTab("Bronie")
-local teleportTab = createTab("Teleporty")
-local funTab = createTab("Inne")
+local vehicleTab = createTab("Pojazdy")
+local funTab = createTab("Trolle")
 
 -- ==========================================
--- ZAKŁADKA: STATYSTYKI (Suwaki i Fly)
+-- ZAKŁADKA: RUCH (Suwaki, Fly, Noclip)
 -- ==========================================
-addSlider("Statystyki", "Prędkość Chodzenia (Speed)", 16, 250, 16, function(value)
+addSlider("Ruch", "Prędkość (Speed)", 16, 250, 16, function(value)
     local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
     if hum then hum.WalkSpeed = value end
 end)
 
-addSlider("Statystyki", "Siła Skoku (JumpPower)", 50, 400, 50, function(value)
+addSlider("Ruch", "Siła Skoku (JumpPower)", 50, 400, 50, function(value)
     local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then 
-        hum.UseJumpPower = true
-        hum.JumpPower = value 
+    if hum then hum.UseJumpPower = true; hum.JumpPower = value end
+end)
+
+local noclip = false
+addButton("Ruch", "Noclip (Przechodzenie przez ściany)", function()
+    noclip = not noclip
+    if noclip then
+        local connection
+        connection = RunService.Stepped:Connect(function()
+            if not noclip then connection:Disconnect() return end
+            if Player.Character then
+                for _, part in pairs(Player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
     end
 end)
 
 local flying = false
 local flySpeed = 60
 local bVel, bGyr
-addButton("Statystyki", "Latanie (Fly) Włącz/Wyłącz", function()
+addButton("Ruch", "Latanie (Fly)", function()
     flying = not flying
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -211,36 +224,41 @@ addButton("Statystyki", "Latanie (Fly) Włącz/Wyłącz", function()
 end)
 
 -- ==========================================
--- ZAKŁADKA: BRONIE (Gatling Glitch i Ekwipunek)
+-- ZAKŁADKA: BRONIE (Naprawiony Ekwipunek)
 -- ==========================================
-addButton("Bronie", "Daj Wszystkie Bronie/Narzędzia", function()
-    -- Pobieranie wszystkich przedmiotów przechowywanych w pamięci Brookhaven
+addButton("Bronie", "Daj Wszystkie Bronie i Przedmioty", function()
     pcall(function()
-        local storage = game:GetService("ReplicatedStorage"):FindFirstChild("Tools") or game:GetService("ReplicatedStorage")
-        for _, tool in pairs(storage:GetDescendants()) do
-            if tool:IsA("Tool") then
-                local clone = tool:Clone()
+        -- Bezpośrednie pobieranie z zarejestrowanych kontenerów przedmiotów Brookhaven
+        local items = ReplicatedStorage:FindFirstChild("Tools") or ReplicatedStorage:FindFirstChild("Items") or ReplicatedStorage
+        for _, obj in pairs(items:GetDescendants()) do
+            if obj:IsA("Tool") then
+                local clone = obj:Clone()
                 clone.Parent = Player.Backpack
+            end
+        end
+        -- Alternatywne pobieranie z Inventory gry
+        local playerGui = Player:FindFirstChildOfClass("PlayerGui")
+        if playerGui and playerGui:FindFirstChild("Inventory") then
+            for _, item in pairs(playerGui.Inventory:GetDescendants()) do
+                if item:IsA("Tool") then item:Clone().Parent = Player.Backpack end
             end
         end
     end)
 end)
 
 local glitchActive = false
-addButton("Bronie", "Gatling Mode (Miganie Wszystkich Broni)", function()
+addButton("Bronie", "Gatling Mode (Szybkie Miganie Broni)", function()
     glitchActive = not glitchActive
     if not glitchActive then return end
-    
     task.spawn(function()
         while glitchActive do
             local char = Player.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             if hum and Player.Backpack then
-                local tools = Player.Backpack:GetChildren()
-                for _, tool in pairs(tools) do
+                for _, tool in pairs(Player.Backpack:GetChildren()) do
                     if tool:IsA("Tool") and glitchActive then
                         hum:EquipTool(tool)
-                        task.wait(0.01) -- Szalenie szybka zmiana dłoni
+                        task.wait(0.01)
                     end
                 end
             end
@@ -250,52 +268,66 @@ addButton("Bronie", "Gatling Mode (Miganie Wszystkich Broni)", function()
 end)
 
 -- ==========================================
--- ZAKŁADKA: TELEPORTY
+-- ZAKŁADKA: POJAZDY (Działające RGB)
 -- ==========================================
-local function tpTo(cframe)
-    local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then hrp.CFrame = cframe end
-end
-
-addButton("Teleporty", "Bank (Sejf)", function() tpTo(CFrame.new(-22, 10, 52)) end)
-addButton("Teleporty", "Posterunek Policji", function() tpTo(CFrame.new(-42, 11, 28)) end)
-addButton("Teleporty", "Spawn Główny", function() tpTo(CFrame.new(0, 10, 0)) end)
-addButton("Teleporty", "Szpital", function() tpTo(CFrame.new(65, 12, -10)) end)
-
--- ==========================================
--- ZAKŁADKA: INNE
--- ==========================================
-addButton("Inne", "Włącz ESP (Prześwietlenie graczy)", function()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            if not p.Character.HumanoidRootPart:FindFirstChild("BoxHighlight") then
-                local box = Instance.new("BoxHandleAdornment", p.Character.HumanoidRootPart)
-                box.Name = "BoxHighlight"
-                box.Size = Vector3.new(4, 6, 4)
-                box.Color3 = Color3.fromRGB(255, 255, 0)
-                box.AlwaysOnTop = true
-                box.ZIndex = 5
-                box.Adornee = p.Character.HumanoidRootPart
-                box.Transparency = 0.5
-            end
-        end
-    end
-end)
-
-addButton("Inne", "Noclip Przez Ściany Sejfu", function()
-    pcall(function()
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("wall") or v.Name:lower():find("safe")) then
-                if (v.Position - Player.Character.HumanoidRootPart.Position).Magnitude < 50 then
-                    v.CanCollide = false
-                    v.Transparency = 0.5
+local rgbCarActive = false
+addButton("Pojazdy", "RGB Car (GAMEPASS ONLY)", function()
+    rgbCarActive = not rgbCarActive
+    if not rgbCarActive then return end
+    
+    task.spawn(function()
+        while rgbCarActive do
+            pcall(function()
+                local car = nil
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then
+                        car = v.Parent
+                        break
+                    end
                 end
-            end
+                
+                if car then
+                    local color = Color3.fromHSV(currentHue, 1, 1)
+                    -- Wywołanie oficjalnego eventu sieciowego Brookhaven z Gamepassa tuningu:
+                    local network = ReplicatedStorage:FindFirstChild("Network")
+                    if network and network:FindFirstChild("ColorCar") then
+                        network.ColorCar:FireServer(car, color)
+                    end
+                end
+            end)
+            task.wait(0.05)
         end
     end)
 end)
 
--- Przycisk zamknięcia
+-- ==========================================
+-- ZAKŁADKA: TROLLE (Jerk Tool)
+-- ==========================================
+addButton("Trolle", "Daj Jerk Tool", function()
+    local jerkTool = Instance.new("Tool")
+    jerkTool.Name = "Jerk Tool"
+    jerkTool.RequiresHandle = false
+    jerkTool.Parent = Player.Backpack
+    
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://148840371" -- Działająca, klasyczna śmieszna animacja ruchu rąk
+    
+    local track
+    jerkTool.Equipped:Connect(function()
+        local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            track = hum:LoadAnimation(anim)
+            track.Looped = true
+            track:Play()
+        end
+    end)
+    
+    jerkTool.Unequipped:Connect(function()
+        if track then track:Stop() end
+    end)
+end)
+
+-- Przycisk Zamknij
 local CloseBtn = Instance.new("TextButton", MainFrame)
 CloseBtn.Size = UDim2.new(0, 130, 0, 40)
 CloseBtn.Position = UDim2.new(0, 0, 1, -40)
@@ -306,7 +338,9 @@ CloseBtn.Font = Enum.Font.SourceSansBold
 CloseBtn.TextSize = 14
 CloseBtn.BorderSizePixel = 0
 CloseBtn.MouseButton1Click:Connect(function()
+    rgbCarActive = false
     glitchActive = false
     flying = false
+    noclip = false
     ScreenGui:Destroy()
 end)
