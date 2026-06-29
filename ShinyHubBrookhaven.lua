@@ -1,7 +1,7 @@
 --[[
-    ShinyHub V5 - Brookhaven RP Premium Edition
-    - PRZYWRÓCONO: Klasyczny zestaw 40 sprawdzonych opcji
-    - FIX: Naprawiony i zabezpieczony system ładowania animacji
+    ShinyHub V5 - Brookhaven RP Clean Edition (2026 Fix)
+    - BEZPIECZNE ANIMACJE: Całkowicie nowy, lekki system ON/OFF bez używania tooli.
+    - STABILNOŚĆ: Usunięto agresywne pętle RenderStepped, skrypt odpala się natychmiast.
 ]]
 
 local Players = game:GetService("Players")
@@ -17,11 +17,14 @@ if CoreGui:FindFirstChild("ShinyHubMenu") then
     pcall(function() CoreGui.ShinyHubMenu:Destroy() end) 
 end
 
--- Stan przełączników
+-- Stan przełączników (Toggles)
 local Toggles = {
     Noclip = false, Fly = false, InfJump = false, Gatling = false,
     RGB = false, Horn = false, ESP = false, SafeNoclip = false, Fullbright = false
 }
+
+-- Stan włączonych animacji
+local ActiveAnimations = {}
 
 local currentHue = 0
 task.spawn(function()
@@ -32,55 +35,64 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- POPRAWIONY SYSTEM ANIMACJI
+-- PROSTY I STABILNY SYSTEM ANIMACJI ON/OFF
 -- ==========================================
-local ActiveTrack = nil
-local CurrentAnimID = nil
+local function toggleAnimation(animID, btn)
+    local char = Player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if not hum then return end
+    
+    -- Jeśli ta animacja już gra, wyłącz ją
+    if ActiveAnimations[animID] then
+        pcall(function()
+            ActiveAnimations[animID]:Stop()
+            ActiveAnimations[animID]:Destroy()
+        end)
+        ActiveAnimations[animID] = nil
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        return
+    end
+    
+    -- Wyłącz inne animacje ShinyHub przed włączeniem nowej
+    for id, track in pairs(ActiveAnimations) do
+        pcall(function() track:Stop() track:Destroy() end)
+        ActiveAnimations[id] = nil
+    end
+    
+    -- Odpalenie nowej animacji bez żadnego tool'a
+    pcall(function()
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. tostring(animID)
+        
+        local track = hum:LoadAnimation(anim)
+        track.Priority = Enum.AnimationPriority.Action
+        track.Looped = true
+        track:Play()
+        
+        ActiveAnimations[animID] = track
+        btn.BackgroundColor3 = Color3.fromRGB(25, 45, 25)
+        btn.TextColor3 = Color3.fromRGB(120, 255, 120)
+    end)
+end
 
-local function forcePlayAnimation(animID)
+local function stopAllAnimations()
+    for id, track in pairs(ActiveAnimations) do
+        pcall(function() track:Stop() track:Destroy() end)
+        ActiveAnimations[id] = nil
+    end
     pcall(function()
         local char = Player.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local animScript = char and char:FindFirstChild("Animate")
-        
-        if animScript then animScript.Disabled = true end
-        
         if hum then
-            if ActiveTrack then ActiveTrack:Stop() ActiveTrack:Destroy() end
             for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:Stop() end
-            
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "rbxassetid://" .. tostring(animID)
-            
-            ActiveTrack = hum:LoadAnimation(anim)
-            ActiveTrack.Priority = Enum.AnimationPriority.Action
-            ActiveTrack.Looped = true
-            ActiveTrack:Play()
-            CurrentAnimID = animID
         end
     end)
 end
 
-local function stopAllCustomAnimations()
-    CurrentAnimID = nil
-    if ActiveTrack then pcall(function() ActiveTrack:Stop() ActiveTrack:Destroy() end) ActiveTrack = nil end
-    pcall(function()
-        local char = Player.Character
-        local animScript = char and char:FindFirstChild("Animate")
-        if animScript then animScript.Disabled = false end
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:Stop() end end
-    end)
-end
-
-RunService.RenderStepped:Connect(function()
-    if CurrentAnimID and ActiveTrack and not ActiveTrack.IsPlaying then
-        pcall(function() ActiveTrack:Play() end)
-    end
-end)
-
 -- ==========================================
--- INTERFEJS GRAFICZNY (STABILNY)
+-- INTERFEJS GRAFICZNY
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShinyHubMenu"
@@ -95,7 +107,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
 MainFrame.BorderSizePixel = 2
 
--- Modern Dragging
+-- Modern Dragging (Kompatybilne i bezbłędne)
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -194,6 +206,20 @@ local function addButton(tabName, text, callback)
     btn.MouseButton1Click:Connect(function() pcall(callback) end)
 end
 
+local function addAnimButton(tabName, text, animID)
+    local scroll = tabs[tabName].scroll
+    local btn = Instance.new("TextButton", scroll)
+    btn.Size = UDim2.new(1, -10, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 14
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    btn.MouseButton1Click:Connect(function() toggleAnimation(animID, btn) end)
+end
+
 local function addToggleButton(tabName, text, toggleKey, callback)
     local scroll = tabs[tabName].scroll
     local btn = Instance.new("TextButton", scroll)
@@ -219,7 +245,7 @@ local function addToggleButton(tabName, text, toggleKey, callback)
     end)
 end
 
--- Zakładki
+-- Tworzenie Zakładek
 local tabMovement = createTab("Postać & Ruch")
 local tabCombat = createTab("Ekwipunek")
 local tabCars = createTab("Pojazdy")
@@ -253,7 +279,7 @@ addToggleButton("Postać & Ruch", "Nieskończony Skok", "InfJump", function(stat
     if state then _G.JumpCon = UserInputService.JumpRequest:Connect(function() local h = Player.Character:FindFirstChildOfClass("Humanoid") if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end)
     else if _G.JumpCon then _G.JumpCon:Disconnect() end end
 end)
-addButton("Postać & Ruch", "Szybki Reset Postaci", function() if Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").Health = 0 end end)
+addButton("Postać & Ruch", "Szybki Reset Postaci", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").Health = 0 end end)
 addButton("Postać & Ruch", "Połóż postać (Sit)", function() pcall(function() Player.Character.Humanoid.Sit = true end) end)
 
 -- ==========================================
@@ -325,16 +351,16 @@ end)
 addButton("Pojazdy", "Zniszcz koła w aktualnym aucie", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then for _, w in pairs(v.Parent:GetDescendants()) do if w.Name:lower():find("wheel") then w:Destroy() end end end end end) end)
 
 -- ==========================================
--- 4. ANIMACJE PREMIUM (8 OPCJI)
+-- 4. ANIMACJE PREMIUM ON/OFF (8 OPCJI)
 -- ==========================================
-addButton("Animacje Premium", "AKTYWUJ: Jerk Tool / Flex", function() forcePlayAnimation(507371109) end)
-addButton("Animacje Premium", "AKTYWUJ: Take the L", function() forcePlayAnimation(333833446) end)
-addButton("Animacje Premium", "AKTYWUJ: Scuba Wave", function() forcePlayAnimation(333839256) end)
-addButton("Animacje Premium", "AKTYWUJ: Zombie Walk", function() forcePlayAnimation(35654637) end)
-addButton("Animacje Premium", "AKTYWUJ: Taniec Hype", function() forcePlayAnimation(424907230) end)
-addButton("Animacje Premium", "AKTYWUJ: Salto (Backflip)", function() forcePlayAnimation(303358334) end)
-addButton("Animacje Premium", "AKTYWUJ: Lewitacja", function() forcePlayAnimation(313331574) end)
-addButton("Animacje Premium", "WYŁĄCZ WSZYSTKIE ANIMACJE (RESET)", function() stopAllCustomAnimations() end)
+addAnimButton("Animacje Premium", "Jerk Tool / Flex (ON/OFF)", 507371109)
+addAnimButton("Animacje Premium", "Take the L (ON/OFF)", 333833446)
+addAnimButton("Animacje Premium", "Scuba Wave (ON/OFF)", 333839256)
+addAnimButton("Animacje Premium", "Zombie Walk (ON/OFF)", 35654637)
+addAnimButton("Animacje Premium", "Taniec Hype (ON/OFF)", 424907230)
+addAnimButton("Animacje Premium", "Salto w tył (ON/OFF)", 303358334)
+addAnimButton("Animacje Premium", "Lewitacja (ON/OFF)", 313331574)
+addButton("Animacje Premium", "WYŁĄCZ WSZYSTKIE ANIMACJE", function() stopAllAnimations() end)
 
 -- ==========================================
 -- 5. TELEPORTACJA (7 OPCJI)
@@ -351,7 +377,7 @@ addButton("Teleportacja", "Losowa Działka (Plot 1)", function() tpl(CFrame.new(
 -- ==========================================
 -- 6. WIZUALNE & ŚWIAT (6 OPCJI)
 -- ==========================================
-addToggleButton("Wizualne & ŚWIAT", "Wyświetl ESP Graczy", "ESP", function(state)
+addToggleButton("Wizualne & Świat", "Wyświetl ESP Graczy", "ESP", function(state)
     if state then
         _G.ESPTrack = RunService.Heartbeat:Connect(function()
             for _, p in pairs(Players:GetPlayers()) do
@@ -367,7 +393,7 @@ addToggleButton("Wizualne & ŚWIAT", "Wyświetl ESP Graczy", "ESP", function(sta
         for _, p in pairs(Players:GetPlayers()) do pcall(function() p.Character.HumanoidRootPart.ESP:Destroy() end) end
     end
 end)
-addToggleButton("Wizualne & ŚWIAT", "Przenikanie przez Sejf", "SafeNoclip", function(state)
+addToggleButton("Wizualne & Świat", "Przenikanie przez Sejf", "SafeNoclip", function(state)
     if state then
         _G.SafeTrack = RunService.Stepped:Connect(function()
             for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name == "SafeDoor" or v.Name == "BankWall") then v.CanCollide = false v.Transparency = 0.4 end end
@@ -377,12 +403,12 @@ addToggleButton("Wizualne & ŚWIAT", "Przenikanie przez Sejf", "SafeNoclip", fun
         for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name == "SafeDoor" or v.Name == "BankWall") then v.CanCollide = true v.Transparency = 0 end end
     end
 end)
-addToggleButton("Wizualne & ŚWIAT", "Tryb Jasności (Fullbright)", "Fullbright", function(state)
+addToggleButton("Wizualne & Świat", "Tryb Jasności (Fullbright)", "Fullbright", function(state)
     if state then Lighting.Brightness = 2 Lighting.ClockTime = 14 Lighting.FogEnd = 999999 else Lighting.Brightness = 1 Lighting.ClockTime = 12 end
 end)
-addButton("Wizualne & ŚWIAT", "Usuń Wszystkie Drzwi z Mapy", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("gate")) then v:Destroy() end end end)
-addButton("Wizualne & ŚWIAT", "Zgaś Lampy Uliczne", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and v.Name:lower():find("light") then v:Destroy() end end end)
-addButton("Wizualne & ŚWIAT", "Crash Świateł w Domach", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("RemoteEvent") and v.Name:find("Light") then v:FireServer(false) end end end) end)
+addButton("Wizualne & Świat", "Usuń Wszystkie Drzwi z Mapy", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("gate")) then v:Destroy() end end end)
+addButton("Wizualne & Świat", "Zgaś Lampy Uliczne", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and v.Name:lower():find("light") then v:Destroy() end end end)
+addButton("Wizualne & Świat", "Crash Świateł w Domach", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("RemoteEvent") and v.Name:find("Light") then v:FireServer(false) end end end) end)
 
 -- ==========================================
 -- PRZYCISK ZAMKNIĘCIA INTERFEJSU
@@ -397,7 +423,7 @@ CloseBtn.Font = Enum.Font.SourceSansBold
 CloseBtn.TextSize = 13
 CloseBtn.BorderSizePixel = 0
 CloseBtn.MouseButton1Click:Connect(function()
-    stopAllCustomAnimations()
+    stopAllAnimations()
     for k, _ in pairs(Toggles) do Toggles[k] = false end
     if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
     if _G.BVel then _G.BVel:Destroy() _G.BGyr:Destroy() end
