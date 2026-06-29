@@ -1,9 +1,8 @@
 --[[
-    ShinyHub V7 - Brookhaven RP Mega Premium Edition
-    - FIX: Całkowicie usunięto błąd składni, skrypt odpala się natychmiast.
-    - FIX: Animacje zablokowane na stałe (Bypass serwerowego resetu Idle)
-    - SYSTEM: Wygodne przełączniki [ON / OFF] dla każdej opcji wymagającej kontroli
-    - ILOŚĆ: Dokładnie 60 unikalnych, spersonalizowanych funkcji pod Brookhaven
+    ShinyHub V7.1 - Safe & Clean Edition (2026 Fix)
+    - USUNIĘTO: Draggable (zastąpione stabilnym, nowoczesnym układem UI)
+    - USUNIĘTO: Przestarzałe odwołania do starego czatu
+    - DODANO: Pełne bezpieczne pętle pcall zapobiegające crashom executora
 ]]
 
 local Players = game:GetService("Players")
@@ -14,7 +13,10 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 
-if CoreGui:FindFirstChild("ShinyHubMenu") then CoreGui.ShinyHubMenu:Destroy() end
+-- Czyszczenie starego GUI
+if CoreGui:FindFirstChild("ShinyHubMenu") then 
+    pcall(function() CoreGui.ShinyHubMenu:Destroy() end) 
+end
 
 -- Zmienne globalne stanów (Toggles)
 local Toggles = {
@@ -32,7 +34,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- NIEZAWODNY SYSTEM BLOKADY ANIMACJI
+-- SYSTEM ANIMACJI
 -- ==========================================
 local ActiveTrack = nil
 local CurrentAnimID = nil
@@ -43,11 +45,9 @@ local function forcePlayAnimation(animID)
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         local animScript = char:FindFirstChild("Animate")
         
-        -- Wyłączenie kontroli domyślnego skryptu animacji na czas trwania emotki
         if animScript then animScript.Disabled = true end
         
         if hum then
-            -- Czyszczenie starych śladów
             if ActiveTrack then ActiveTrack:Stop() ActiveTrack:Destroy() end
             for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:Stop() end
             
@@ -65,17 +65,16 @@ end
 
 local function stopAllCustomAnimations()
     CurrentAnimID = nil
-    if ActiveTrack then ActiveTrack:Stop() ActiveTrack:Destroy() ActiveTrack = nil end
+    if ActiveTrack then pcall(function() ActiveTrack:Stop() ActiveTrack:Destroy() end) ActiveTrack = nil end
     pcall(function()
         local char = Player.Character
         local animScript = char:FindFirstChild("Animate")
-        if animScript then animScript.Disabled = false end -- Przywrócenie normalnego ruchu
+        if animScript then animScript.Disabled = false end
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:Stop() end end
     end)
 end
 
--- Utrzymywanie klatek animacji bez względu na ruch czy stan bezczynności postaci
 RunService.RenderStepped:Connect(function()
     if CurrentAnimID and ActiveTrack and not ActiveTrack.IsPlaying then
         pcall(function() ActiveTrack:Play() end)
@@ -83,11 +82,13 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- INTERFEJS GRAFICZNY (60 OPCJI)
+-- INTERFEJS GRAFICZNY (BEZ DRAGGABLE/CRASHY)
 -- ==========================================
-local ScreenGui = Instance.new("ScreenGui", CoreGui)
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShinyHubMenu"
 ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
 
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 680, 0, 540)
@@ -95,8 +96,24 @@ MainFrame.Position = UDim2.new(0.5, -340, 0.5, -270)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
 MainFrame.BorderSizePixel = 2
-MainFrame.Active = true
-MainFrame.Draggable = true
+
+-- Prosty system przeciągania okna (Kompatybilny z 2026)
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true dragStart = input.Position startPos = MainFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
 
 local TabPanel = Instance.new("Frame", MainFrame)
 TabPanel.Size = UDim2.new(0, 160, 1, -45)
@@ -113,29 +130,31 @@ local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 45)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(0, 0, 0)
-Title.Text = "★ SHINYHUB V7 - ULTIMATE 60 PREMIUM SELECTION ★"
+Title.Text = "★ SHINYHUB V7.1 - COMPATIBILITY FIX ★"
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 
 local tabs = {}
 local activeTab = nil
+local tabCount = 0
 
 local function createTab(name)
     local tabBtn = Instance.new("TextButton", TabPanel)
     tabBtn.Size = UDim2.new(1, 0, 0, 36)
-    tabBtn.Position = UDim2.new(0, 0, 0, #TabPanel:GetChildren() * 36)
+    tabBtn.Position = UDim2.new(0, 0, 0, tabCount * 36)
     tabBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
     tabBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
     tabBtn.Text = name
     tabBtn.Font = Enum.Font.SourceSansBold
     tabBtn.TextSize = 12
     tabBtn.BorderSizePixel = 0
+    tabCount = tabCount + 1
     
     local scroll = Instance.new("ScrollingFrame", ContentPanel)
     scroll.Size = UDim2.new(1, 0, 1, 0)
     scroll.BackgroundTransparency = 1
     scroll.Visible = false
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 750)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 800)
     scroll.ScrollBarThickness = 5
     
     local layout = Instance.new("UIListLayout", scroll)
@@ -174,7 +193,7 @@ local function addButton(tabName, text, callback)
     btn.TextSize = 13
     btn.BorderSizePixel = 1
     btn.BorderColor3 = Color3.fromRGB(50, 50, 50)
-    btn.MouseButton1Click:Connect(callback)
+    btn.MouseButton1Click:Connect(function() pcall(callback) end)
 end
 
 local function addToggleButton(tabName, text, toggleKey, callback)
@@ -200,7 +219,7 @@ local function addToggleButton(tabName, text, toggleKey, callback)
             btn.TextColor3 = Color3.fromRGB(255, 100, 100)
             btn.Text = text .. " [OFF]"
         end
-        callback(Toggles[toggleKey])
+        pcall(callback, Toggles[toggleKey])
     end)
 end
 
@@ -217,11 +236,11 @@ local function addSlider(tabName, text, min, max, default, callback)
     UserInputService.InputChanged:Connect(function(i) if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
         local p = math.clamp((i.Position.X - tr.AbsolutePosition.X) / tr.AbsoluteSize.X, 0, 1)
         b.Position = UDim2.new(p, -6, 0, -3) fi.Size = UDim2.new(p, 0, 1, 0)
-        local val = math.floor(min + (p * (max - min))) l.Text = text..": "..val callback(val)
+        local val = math.floor(min + (p * (max - min))) l.Text = text..": "..val pcall(callback, val)
     end end)
 end
 
--- Tworzenie Kategorii
+-- Generowanie zakładek
 local tabMovement = createTab("Ruch & Postać")
 local tabCombat = createTab("Ekwipunek")
 local tabCars = createTab("Pojazdy")
@@ -231,7 +250,7 @@ local tabLocs = createTab("Teleport Lokacji")
 local tabServer = createTab("Trolle & Otoczenie")
 
 -- ==========================================
--- 1. RUCH & POSTAĆ (9 OPCJI)
+-- 1. RUCH & POSTAĆ
 -- ==========================================
 addSlider("Ruch & Postać", "Bieg (WalkSpeed)", 16, 350, 16, function(v) if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = v end end)
 addSlider("Ruch & Postać", "Wysokość Skoku", 50, 500, 50, function(v) local h = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") if h then h.UseJumpPower = true h.JumpPower = v end end)
@@ -268,7 +287,7 @@ addButton("Ruch & Postać", "[6] Usuń Swój NameTag", function() pcall(function
 addButton("Ruch & Postać", "[7] Połóż postać na ziemi (Sit)", function() pcall(function() Player.Character.Humanoid.Sit = true end end)
 
 -- ==========================================
--- 2. EKWIPUNEK (8 OPCJI)
+-- 2. EKWIPUNEK
 -- ==========================================
 addButton("Ekwipunek", "[8] Pobierz Wszystkie Narzędzia", function()
     local res = ReplicatedStorage:FindFirstChild("Tools") or ReplicatedStorage:FindFirstChild("Items") or ReplicatedStorage
@@ -293,14 +312,14 @@ addButton("Ekwipunek", "[14] Daj Śpiwór (Glitche)", function() local s = Repli
 addButton("Ekwipunek", "[15] Pobierz Jedzenie", function() for _, v in pairs(ReplicatedStorage:GetDescendants()) do if v:IsA("Tool") and (v.Name == "Pizza" or v.Name == "Donut" or v.Name == "IceCream") then v:Clone().Parent = Player.Backpack end end end)
 
 -- ==========================================
--- 3. POJAZDY (8 OPCJI)
+-- 3. POJAZDY
 -- ==========================================
 addToggleButton("Pojazdy", "[16] Tryb Tęczy (RGB Car)", "RGB", function(state)
     if state then task.spawn(function()
         while Toggles.RGB do
             pcall(function()
                 local seat = nil for _, v in pairs(workspace:GetDescendants()) do if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then seat = v break end end
-                if seat and seat.Parent then ReplicatedStorage.Network.ColorCar:FireServer(seat.Parent, Color3.fromHSV(currentHue, 1, 1)) end
+                if seat and seat.Parent and ReplicatedStorage:FindFirstChild("Network") then ReplicatedStorage.Network.ColorCar:FireServer(seat.Parent, Color3.fromHSV(currentHue, 1, 1)) end
             end)
             task.wait(0.05)
         end
@@ -332,7 +351,7 @@ addToggleButton("Pojazdy", "[18] Spamowanie Klaksonem (Horn Bug)", "Horn", funct
         end
     end) end
 end)
-addButton("Pojazdy", "[19] Natychmiast Odwołaj Pojazd", function() if ReplicatedStorage.Network:FindFirstChild("EliminateCar") then ReplicatedStorage.Network.EliminateCar:FireServer() end end)
+addButton("Pojazdy", "[19] Natychmiast Odwołaj Pojazd", function() if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("EliminateCar") then ReplicatedStorage.Network.EliminateCar:FireServer() end end)
 addButton("Pojazdy", "[20] Wysoki Skok Autem", function()
     pcall(function()
         for _, v in pairs(workspace:GetDescendants()) do
@@ -347,11 +366,9 @@ addButton("Pojazdy", "[21] Obróć Auto kołami do dołu", function()
         end
     end)
 end)
-addButton("Pojazdy", "[22] Odblokuj Limit Prędkości Gry", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("VehicleSeat") then v.MaxSpeed = 150 end end end) end)
-addButton("Pojazdy", "[23] Zniszcz koła w aucie", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then for _, w in pairs(v.Parent:GetDescendants()) do if w.Name:lower():find("wheel") then w:Destroy() end end end end end) end)
 
 -- ==========================================
--- 4. ANIMACJE PREMIUM (100% FIXED) (9 OPCJI)
+-- 4. ANIMACJE PREMIUM
 -- ==========================================
 addButton("Animacje Premium", "[24] AKTYWUJ: Jerk Tool / Flex", function() forcePlayAnimation(507371109) end)
 addButton("Animacje Premium", "[25] AKTYWUJ: Take the L (Fortnite)", function() forcePlayAnimation(333833446) end)
@@ -361,10 +378,10 @@ addButton("Animacje Premium", "[28] AKTYWUJ: Taniec Hype", function() forcePlayA
 addButton("Animacje Premium", "[29] AKTYWUJ: Salto w tył (Backflip)", function() forcePlayAnimation(303358334) end)
 addButton("Animacje Premium", "[30] AKTYWUJ: Lewitacja / Medytacja", function() forcePlayAnimation(313331574) end)
 addButton("Animacje Premium", "[31] AKTYWUJ: Chód Superbohatera", function() forcePlayAnimation(616095325) end)
-addButton("Animacje Premium", "[32] WYŁĄCZ WSZYSTKIE ANIMACJE (RESET)", function() stopAllCustomAnimations() end)
+addButton("Animacje Premium", "[32] WYŁĄCZ WSZYSTKIE ANIMACJE", function() stopAllCustomAnimations() end)
 
 -- ==========================================
--- 5. TELEPORT DZIAŁEK (15 OPCJI)
+-- 5. TELEPORT DZIAŁEK
 -- ==========================================
 local pCoords = {
     {-484, 22, -153}, {-484, 22, -87}, {-484, 22, -18}, {-484, 22, 50}, {-484, 22, 118},
@@ -372,13 +389,13 @@ local pCoords = {
     {-28, 22, 169}, {46, 22, 169}, {118, 22, 169}, {189, 22, 169}, {262, 22, 169}
 }
 for i, coord in pairs(pCoords) do
-    addButton("Teleport Działek", "[3"..(i+2).."] Teleport na Działkę nr " .. i, function()
+    addButton("Teleport Działek", "Działka nr " .. i, function()
         if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then Player.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(coord[1], coord[2], coord[3])) end
     end)
 end
 
 -- ==========================================
--- 6. TELEPORT LOKACJI (6 OPCJI)
+-- 6. TELEPORT LOKACJI
 -- ==========================================
 local function tpl(cf) if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then Player.Character.HumanoidRootPart.CFrame = cf end end
 addButton("Teleport Lokacji", "[48] Bank & Wnętrze Sejfu", function() tpl(CFrame.new(-22, 10, 52)) end)
@@ -389,9 +406,9 @@ addButton("Teleport Lokacji", "[52] Tajny Bunkier Hakerski", function() tpl(CFra
 addButton("Teleport Lokacji", "[53] Szkoła (Klasa Główna)", function() tpl(CFrame.new(-10, 10, -100)) end)
 
 -- ==========================================
--- 7. TROLLE & OTOCZENIE (7 OPCJI)
+-- 7. TROLLE & OTOCZENIE
 -- ==========================================
-addToggleButton("Trolle & Otoczenie", "[54] Wyświetl ESP (Szkielety Graczy)", "ESP", function(state)
+addToggleButton("Trolle & Otoczenie", "[54] Wyświetl ESP", "ESP", function(state)
     if state then
         _G.ESPTrack = RunService.Heartbeat:Connect(function()
             for _, p in pairs(Players:GetPlayers()) do
@@ -407,7 +424,7 @@ addToggleButton("Trolle & Otoczenie", "[54] Wyświetl ESP (Szkielety Graczy)", "
         for _, p in pairs(Players:GetPlayers()) do pcall(function() p.Character.HumanoidRootPart.ESP:Destroy() end) end
     end
 end)
-addToggleButton("Trolle & Otoczenie", "[55] Przenikanie Przez Drzwi Sejfu", "SafeNoclip", function(state)
+addToggleButton("Trolle & Otoczenie", "[55] Przenikanie Przez Sejf", "SafeNoclip", function(state)
     if state then
         _G.SafeTrack = RunService.Stepped:Connect(function()
             for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name == "SafeDoor" or v.Name == "BankWall") then v.CanCollide = false v.Transparency = 0.4 end end
@@ -417,14 +434,11 @@ addToggleButton("Trolle & Otoczenie", "[55] Przenikanie Przez Drzwi Sejfu", "Saf
         for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name == "SafeDoor" or v.Name == "BankWall") then v.CanCollide = true v.Transparency = 0 end end
     end
 end)
-addToggleButton("Trolle & Otoczenie", "[56] Tryb Jasności (Fullbright)", "Fullbright", function(state)
+addToggleButton("Trolle & Otoczenie", "[56] Fullbright", "Fullbright", function(state)
     if state then Lighting.Brightness = 2 Lighting.ClockTime = 14 Lighting.FogEnd = 999999 else Lighting.Brightness = 1 Lighting.ClockTime = 12 end
 end)
-addButton("Trolle & Otoczenie", "[57] Usuń Wszystkie Drzwi z Mapy", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("gate")) then v:Destroy() end end end)
-addToggleButton("Trolle & Otoczenie", "[58] Auto-Spam Reklamą na Czacie", "AutoChat", function(state)
-    if state then task.spawn(function() while Toggles.AutoChat do ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("★ SHINYHUB V7 OWNED SERVER ★", "All") task.wait(3) end end) end
-end)
-addButton("Trolle & Otoczenie", "[59] Usuń Lampy Uliczne (Ciemność)", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and v.Name:lower():find("light") then v:Destroy() end end end)
+addButton("Trolle & Otoczenie", "[57] Usuń Wszystkie Drzwi", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("gate")) then v:Destroy() end end end)
+addButton("Trolle & Otoczenie", "[59] Usuń Lampy Uliczne", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and v.Name:lower():find("light") then v:Destroy() end end end)
 addButton("Trolle & Otoczenie", "[60] Crash Świateł w Domach", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("RemoteEvent") and v.Name:find("Light") then v:FireServer(false) end end end) end)
 
 -- ==========================================
