@@ -1,5 +1,5 @@
 --[[
-    ShinyHub V5 - Brookhaven RP Clean Edition (2026 Fix)
+    ShinyHub V6 - Brookhaven RP Clean Edition (2026 Fix)
     - BEZPIECZNE ANIMACJE: Całkowicie nowy, lekki system ON/OFF bez używania tooli.
     - STABILNOŚĆ: Usunięto agresywne pętle RenderStepped, skrypt odpala się natychmiast.
 ]]
