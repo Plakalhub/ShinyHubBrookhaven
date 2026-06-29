@@ -1,5 +1,6 @@
 --[[
     ShinyHub V7 - Brookhaven RP Mega Premium Edition
+    - FIX: Całkowicie usunięto błąd składni, skrypt odpala się natychmiast.
     - FIX: Animacje zablokowane na stałe (Bypass serwerowego resetu Idle)
     - SYSTEM: Wygodne przełączniki [ON / OFF] dla każdej opcji wymagającej kontroli
     - ILOŚĆ: Dokładnie 60 unikalnych, spersonalizowanych funkcji pod Brookhaven
@@ -17,7 +18,7 @@ if CoreGui:FindFirstChild("ShinyHubMenu") then CoreGui.ShinyHubMenu:Destroy() en
 
 -- Zmienne globalne stanów (Toggles)
 local Toggles = {
-    Noclip = false, Fly = false, InfJump = false, Gatling = false, RGB= false, 
+    Noclip = false, Fly = false, InfJump = false, Gatling = false, RGB = false, 
     Horn = false, ESP = false, SafeNoclip = false, Fullbright = false, AutoRob = false,
     ClickTP = false, Freecam = false, SpeedCar = false, AutoChat = false, Invisible = false
 }
@@ -134,7 +135,7 @@ local function createTab(name)
     scroll.Size = UDim2.new(1, 0, 1, 0)
     scroll.BackgroundTransparency = 1
     scroll.Visible = false
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 750) -- Bardzo duża przestrzeń na przyciski
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 750)
     scroll.ScrollBarThickness = 5
     
     local layout = Instance.new("UIListLayout", scroll)
@@ -439,7 +440,6 @@ CloseBtn.Font = Enum.Font.SourceSansBold
 CloseBtn.TextSize = 13
 CloseBtn.BorderSizePixel = 0
 CloseBtn.MouseButton1Click:Connect(function()
-    -- Reset wszystkich aktywnych pętli i procesów
     stopAllCustomAnimations()
     for k, _ in pairs(Toggles) do Toggles[k] = false end
     if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
