@@ -1,9 +1,9 @@
 --[[
-    ShinyHub V5 - Brookhaven RP Mobile, Fly & Minimize Fix Edition (2026)
-    - RESPONSIVE GUI: Dopasowane do telefonów (Scale-based).
+    ShinyHub V5 - Brookhaven Mobile Compact Edition (2026)
+    - COMPACT GUI: Zmniejszono całe menu i pasek o 40% (Mobile Scaling).
+    - RP NAME FIX: Dodano pętlę czekającą na pełne załadowanie postaci gracza.
     - FLY FIX: Latanie 3D (kierunek kamery góra/dół).
-    - RP NAME FIX: Zaktualizowano powitanie o ~itzz_dekl1.
-    - MINIMIZE SYSTEM: Przycisk [−] i [+] do zwijania interfejsu w mały pasek.
+    - MINIMIZE SYSTEM: Dyskretny pasek [+] i przycisk [−].
 ]]
 
 local Players = game:GetService("Players")
@@ -14,19 +14,31 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 
--- AUTOMATYCZNA ZMIANA RP NAME (ZAKTUALIZOWANA)
+-- STABILNY SYSTEM ZMIANY RP NAME
 task.spawn(function()
     local welcomeText = "Welcome, thank you for using this hub ~majku ~itzz_dekl1"
-    local rpNameEvent = ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SetIdentity")
-    if rpNameEvent then
-        rpNameEvent:FireServer(welcomeText, "Gold", "Hub Users")
-    else
-        for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-            if v:IsA("RemoteEvent") and v.Name == "SetIdentity" then
-                v:FireServer(welcomeText, "Gold", "Hub Users")
-                break
+    
+    -- Czekamy na załadowanie postaci gracza
+    if not Player.Character then Player.CharacterAdded:Wait() end
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    char:WaitForChild("HumanoidRootPart", 10)
+    task.wait(2) -- Bezpieczny zapas czasu na załadowanie skryptów gry
+    
+    -- Próba wymuszenia zmiany nazwy RP
+    for i = 1, 5 do
+        local rpNameEvent = ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SetIdentity")
+        if rpNameEvent then
+            rpNameEvent:FireServer(welcomeText, "Gold", "Hub Users")
+            break
+        else
+            for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+                if v:IsA("RemoteEvent") and v.Name == "SetIdentity" then
+                    v:FireServer(welcomeText, "Gold", "Hub Users")
+                    break
+                end
             end
         end
+        task.wait(1)
     end
 end)
 
@@ -41,9 +53,7 @@ local Toggles = {
     RGB = false, Horn = false, ESP = false, SafeNoclip = false, Fullbright = false
 }
 
--- Stan włączonych animacji
 local ActiveAnimations = {}
-
 local currentHue = 0
 task.spawn(function()
     while true do
@@ -52,17 +62,13 @@ task.spawn(function()
     end
 end)
 
--- SYSTEM ANIMACJI ON/OFF
 local function toggleAnimation(animID, btn)
     local char = Player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
     
     if ActiveAnimations[animID] then
-        pcall(function()
-            ActiveAnimations[animID]:Stop()
-            ActiveAnimations[animID]:Destroy()
-        end)
+        pcall(function() ActiveAnimations[animID]:Stop() ActiveAnimations[animID]:Destroy() end)
         ActiveAnimations[animID] = nil
         btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -77,12 +83,10 @@ local function toggleAnimation(animID, btn)
     pcall(function()
         local anim = Instance.new("Animation")
         anim.AnimationId = "rbxassetid://" .. tostring(animID)
-        
         local track = hum:LoadAnimation(anim)
         track.Priority = Enum.AnimationPriority.Action
         track.Looped = true
         track:Play()
-        
         ActiveAnimations[animID] = track
         btn.BackgroundColor3 = Color3.fromRGB(25, 45, 25)
         btn.TextColor3 = Color3.fromRGB(120, 255, 120)
@@ -102,7 +106,7 @@ local function stopAllAnimations()
 end
 
 -- ==========================================
--- INTERFEJS GRAFICZNY (ZOPTYMALIZOWANY POD TELEFONY)
+-- INTERFEJS GRAFICZNY (KOMPAKTOWY - POD TELEFONY)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShinyHubMenu"
@@ -110,24 +114,23 @@ ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
 
--- GŁÓWNY PANEL HUB-a
+-- GŁÓWNY PANEL (Zmniejszony o 40%)
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0.55, 0, 0.65, 0)
-MainFrame.Position = UDim2.new(0.22, 0, 0.17, 0)
+MainFrame.Size = UDim2.new(0.38, 0, 0.45, 0)
+MainFrame.Position = UDim2.new(0.31, 0, 0.27, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
 MainFrame.BorderSizePixel = 2
 
--- MAŁY PASEK MINIMALIZACJI (Ukryty na starcie)
+-- MAŁY PASEK (Zmniejszony i bardzo zgrabny)
 local MiniFrame = Instance.new("Frame", ScreenGui)
-MiniFrame.Size = UDim2.new(0.18, 0, 0.08, 0)
+MiniFrame.Size = UDim2.new(0.12, 0, 0.05, 0)
 MiniFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
 MiniFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MiniFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
 MiniFrame.BorderSizePixel = 2
 MiniFrame.Visible = false
 
--- Dotykowe Przesuwanie dla obu paneli (Mobile Friendly)
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     frame.InputBegan:Connect(function(input)
@@ -149,9 +152,8 @@ end
 makeDraggable(MainFrame)
 makeDraggable(MiniFrame)
 
--- Zawartość Małego Paska (Plus Button)
 local MiniTitle = Instance.new("TextLabel", MiniFrame)
-MiniTitle.Size = UDim2.new(0.75, 0, 1, 0)
+MiniTitle.Size = UDim2.new(0.7, 0, 1, 0)
 MiniTitle.BackgroundTransparency = 1
 MiniTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 MiniTitle.Text = " ShinyHub"
@@ -160,54 +162,44 @@ MiniTitle.TextScaled = true
 MiniTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local MaximizeBtn = Instance.new("TextButton", MiniFrame)
-MaximizeBtn.Size = UDim2.new(0.25, 0, 1, 0)
-MaximizeBtn.Position = UDim2.new(0.75, 0, 0, 0)
+MaximizeBtn.Size = UDim2.new(0.3, 0, 1, 0)
+MaximizeBtn.Position = UDim2.new(0.7, 0, 0, 0)
 MaximizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 MaximizeBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 MaximizeBtn.Text = "+"
 MaximizeBtn.Font = Enum.Font.SourceSansBold
 MaximizeBtn.TextScaled = true
 MaximizeBtn.BorderSizePixel = 0
+MaximizeBtn.MouseButton1Click:Connect(function() MiniFrame.Visible = false MainFrame.Visible = true end)
 
-MaximizeBtn.MouseButton1Click:Connect(function()
-    MiniFrame.Visible = false
-    MainFrame.Visible = true
-end)
-
--- Zawartość Głównego Menu
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(0.9, 0, 0.1, 0)
+Title.Size = UDim2.new(0.88, 0, 0.12, 0)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(0, 0, 0)
-Title.Text = "★ SHINYHUB V5 - MOBILE ★"
+Title.Text = "★ SHINYHUB V5 ★"
 Title.Font = Enum.Font.SourceSansBold
 Title.TextScaled = true
 
--- Przycisk Minus do chowania menu
 local MinimizeBtn = Instance.new("TextButton", MainFrame)
-MinimizeBtn.Size = UDim2.new(0.1, 0, 0.1, 0)
-MinimizeBtn.Position = UDim2.new(0.9, 0, 0, 0)
+MinimizeBtn.Size = UDim2.new(0.12, 0, 0.12, 0)
+MinimizeBtn.Position = UDim2.new(0.88, 0, 0, 0)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 160, 0)
 MinimizeBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 MinimizeBtn.Text = "−"
 MinimizeBtn.Font = Enum.Font.SourceSansBold
 MinimizeBtn.TextScaled = true
 MinimizeBtn.BorderSizePixel = 0
-
-MinimizeBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MiniFrame.Visible = true
-end)
+MinimizeBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false MiniFrame.Visible = true end)
 
 local TabPanel = Instance.new("Frame", MainFrame)
-TabPanel.Size = UDim2.new(0.28, 0, 0.82, 0)
-TabPanel.Position = UDim2.new(0, 0, 0.1, 0)
+TabPanel.Size = UDim2.new(0.3, 0, 0.88, 0)
+TabPanel.Position = UDim2.new(0, 0, 0.12, 0)
 TabPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 TabPanel.BorderSizePixel = 0
 
 local ContentPanel = Instance.new("Frame", MainFrame)
-ContentPanel.Size = UDim2.new(0.70, 0, 0.88, 0)
-ContentPanel.Position = UDim2.new(0.29, 0, 0.11, 0)
+ContentPanel.Size = UDim2.new(0.68, 0, 0.88, 0)
+ContentPanel.Position = UDim2.new(0.31, 0, 0.12, 0)
 ContentPanel.BackgroundTransparency = 1
 
 local tabs = {}
@@ -216,33 +208,29 @@ local tabCount = 0
 
 local function createTab(name)
     local tabBtn = Instance.new("TextButton", TabPanel)
-    tabBtn.Size = UDim2.new(1, 0, 0, 30)
-    tabBtn.Position = UDim2.new(0, 0, 0, tabCount * 30)
+    tabBtn.Size = UDim2.new(1, 0, 0, 24)
+    tabBtn.Position = UDim2.new(0, 0, 0, tabCount * 24)
     tabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
     tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     tabBtn.Text = name
     tabBtn.Font = Enum.Font.SourceSansBold
-    tabBtn.TextSize = 11
+    tabBtn.TextSize = 10
     tabBtn.BorderSizePixel = 0
     tabCount = tabCount + 1
     
     local scroll = Instance.new("ScrollingFrame", ContentPanel)
-    scroll.Size = UDim2.new(1, -5, 1, 0)
+    scroll.Size = UDim2.new(1, -2, 1, 0)
     scroll.BackgroundTransparency = 1
     scroll.Visible = false
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
-    scroll.ScrollBarThickness = 3
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 400)
+    scroll.ScrollBarThickness = 2
     
     local layout = Instance.new("UIListLayout", scroll)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 4)
+    layout.Padding = UDim.new(0, 3)
     
     tabBtn.MouseButton1Click:Connect(function()
-        for _, t in pairs(tabs) do
-            t.scroll.Visible = false
-            t.btn.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-            t.btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-        end
+        for _, t in pairs(tabs) do t.scroll.Visible = false t.btn.BackgroundColor3 = Color3.fromRGB(24, 24, 24) t.btn.TextColor3 = Color3.fromRGB(200, 200, 200) end
         scroll.Visible = true
         tabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
         tabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -261,40 +249,40 @@ end
 local function addButton(tabName, text, callback)
     local scroll = tabs[tabName].scroll
     local btn = Instance.new("TextButton", scroll)
-    btn.Size = UDim2.new(1, -5, 0, 28)
+    btn.Size = UDim2.new(1, -4, 0, 24)
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
     btn.Font = Enum.Font.SourceSans
-    btn.TextSize = 12
+    btn.TextSize = 11
     btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    btn.BorderColor3 = Color3.fromRGB(50, 50, 50)
     btn.MouseButton1Click:Connect(function() pcall(callback) end)
 end
 
 local function addAnimButton(tabName, text, animID)
     local scroll = tabs[tabName].scroll
     local btn = Instance.new("TextButton", scroll)
-    btn.Size = UDim2.new(1, -5, 0, 28)
+    btn.Size = UDim2.new(1, -4, 0, 24)
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
     btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 12
+    btn.TextSize = 11
     btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    btn.BorderColor3 = Color3.fromRGB(50, 50, 50)
     btn.MouseButton1Click:Connect(function() toggleAnimation(animID, btn) end)
 end
 
 local function addToggleButton(tabName, text, toggleKey, callback)
     local scroll = tabs[tabName].scroll
     local btn = Instance.new("TextButton", scroll)
-    btn.Size = UDim2.new(1, -5, 0, 28)
+    btn.Size = UDim2.new(1, -4, 0, 24)
     btn.BackgroundColor3 = Color3.fromRGB(45, 25, 25)
     btn.TextColor3 = Color3.fromRGB(255, 120, 120)
     btn.Text = text .. " [OFF]"
     btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 11
+    btn.TextSize = 10
     
     btn.MouseButton1Click:Connect(function()
         Toggles[toggleKey] = not Toggles[toggleKey]
@@ -486,13 +474,13 @@ addButton("Wizualne", "Crash Świateł w Domach", function() pcall(function() fo
 
 -- ZAMKNIĘCIE INTERFEJSU
 local CloseBtn = Instance.new("TextButton", TabPanel)
-CloseBtn.Size = UDim2.new(1, 0, 0, 30)
-CloseBtn.Position = UDim2.new(0, 0, 1, -30)
+CloseBtn.Size = UDim2.new(1, 0, 0, 24)
+CloseBtn.Position = UDim2.new(0, 0, 1, -24)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Text = "WYŁĄCZ HUB"
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 11
+CloseBtn.TextSize = 10
 CloseBtn.BorderSizePixel = 0
 CloseBtn.MouseButton1Click:Connect(function()
     stopAllAnimations()
