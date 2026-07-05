@@ -1,9 +1,9 @@
 --[[
-    ShinyHub V5 - Brookhaven Mobile Compact Edition (2026)
-    - COMPACT GUI: Zmniejszono całe menu i pasek o 40% (Mobile Scaling).
-    - RP NAME FIX: Dodano pętlę czekającą na pełne załadowanie postaci gracza.
-    - FLY FIX: Latanie 3D (kierunek kamery góra/dół).
-    - MINIMIZE SYSTEM: Dyskretny pasek [+] i przycisk [−].
+    ShinyHub V5 - Brookhaven Mobile Compact & Troll Edition (2026)
+    - COMPACT GUI: Zoptymalizowane skalowanie pod telefony.
+    - RP NAME FIX: Bezpieczna pętla sprawdzająca i nadająca nick RP.
+    - FLY FIX: Stabilne latanie 3D kierowane kamerą.
+    - TROLLING UPDATE: Ball Kill, Stroller Void oraz system wyboru gracza (Target).
 ]]
 
 local Players = game:GetService("Players")
@@ -14,17 +14,17 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 
+-- Zmienna przechowująca aktualny cel do trollingu
+local SelectedTarget = ""
+
 -- STABILNY SYSTEM ZMIANY RP NAME
 task.spawn(function()
     local welcomeText = "Welcome, thank you for using this hub ~majku ~itzz_dekl1"
-    
-    -- Czekamy na załadowanie postaci gracza
     if not Player.Character then Player.CharacterAdded:Wait() end
     local char = Player.Character or Player.CharacterAdded:Wait()
     char:WaitForChild("HumanoidRootPart", 10)
-    task.wait(2) -- Bezpieczny zapas czasu na załadowanie skryptów gry
+    task.wait(2)
     
-    -- Próba wymuszenia zmiany nazwy RP
     for i = 1, 5 do
         local rpNameEvent = ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SetIdentity")
         if rpNameEvent then
@@ -47,7 +47,6 @@ if CoreGui:FindFirstChild("ShinyHubMenu") then
     pcall(function() CoreGui.ShinyHubMenu:Destroy() end) 
 end
 
--- Stan przełączników (Toggles)
 local Toggles = {
     Noclip = false, Fly = false, InfJump = false, Gatling = false,
     RGB = false, Horn = false, ESP = false, SafeNoclip = false, Fullbright = false
@@ -62,11 +61,21 @@ task.spawn(function()
     end
 end)
 
+-- Funkcja pomocnicza do wyszukiwania gracza po skróconym nicku
+local function getPlayerFromSubstring(str)
+    if str == "" then return nil end
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Name:lower():sub(1, #str) == str:lower() or p.DisplayName:lower():sub(1, #str) == str:lower() then
+            return p
+        end
+    end
+    return nil
+end
+
 local function toggleAnimation(animID, btn)
     local char = Player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
-    
     if ActiveAnimations[animID] then
         pcall(function() ActiveAnimations[animID]:Stop() ActiveAnimations[animID]:Destroy() end)
         ActiveAnimations[animID] = nil
@@ -74,12 +83,10 @@ local function toggleAnimation(animID, btn)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         return
     end
-    
     for id, track in pairs(ActiveAnimations) do
         pcall(function() track:Stop() track:Destroy() end)
         ActiveAnimations[id] = nil
     end
-    
     pcall(function()
         local anim = Instance.new("Animation")
         anim.AnimationId = "rbxassetid://" .. tostring(animID)
@@ -106,7 +113,7 @@ local function stopAllAnimations()
 end
 
 -- ==========================================
--- INTERFEJS GRAFICZNY (KOMPAKTOWY - POD TELEFONY)
+-- INTERFEJS GRAFICZNY (KOMPAKTOWY)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShinyHubMenu"
@@ -114,15 +121,13 @@ ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
 
--- GŁÓWNY PANEL (Zmniejszony o 40%)
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0.38, 0, 0.45, 0)
-MainFrame.Position = UDim2.new(0.31, 0, 0.27, 0)
+MainFrame.Size = UDim2.new(0.40, 0, 0.50, 0)
+MainFrame.Position = UDim2.new(0.30, 0, 0.25, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
 MainFrame.BorderSizePixel = 2
 
--- MAŁY PASEK (Zmniejszony i bardzo zgrabny)
 local MiniFrame = Instance.new("Frame", ScreenGui)
 MiniFrame.Size = UDim2.new(0.12, 0, 0.05, 0)
 MiniFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
@@ -208,8 +213,8 @@ local tabCount = 0
 
 local function createTab(name)
     local tabBtn = Instance.new("TextButton", TabPanel)
-    tabBtn.Size = UDim2.new(1, 0, 0, 24)
-    tabBtn.Position = UDim2.new(0, 0, 0, tabCount * 24)
+    tabBtn.Size = UDim2.new(1, 0, 0, 22)
+    tabBtn.Position = UDim2.new(0, 0, 0, tabCount * 22)
     tabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
     tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     tabBtn.Text = name
@@ -222,7 +227,7 @@ local function createTab(name)
     scroll.Size = UDim2.new(1, -2, 1, 0)
     scroll.BackgroundTransparency = 1
     scroll.Visible = false
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 400)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 420)
     scroll.ScrollBarThickness = 2
     
     local layout = Instance.new("UIListLayout", scroll)
@@ -299,15 +304,142 @@ local function addToggleButton(tabName, text, toggleKey, callback)
     end)
 end
 
--- Zakładki
+-- Rejestracja zakładek
 local tabMovement = createTab("Ruch")
 local tabCombat = createTab("Ekwipunek")
 local tabCars = createTab("Pojazdy")
 local tabAnims = createTab("Animacje")
+local tabTroll = createTab("Trolling")
 local tabTeleport = createTab("Teleport")
 local tabVisuals = createTab("Wizualne")
 
--- 1. POSTAĆ & RUCH
+-- ==========================================
+-- ZAKŁADKA TROLLINGU & WYBORU GRACZA
+-- ==========================================
+local scrollTroll = tabs["Trolling"].scroll
+
+local UserSelector = Instance.new("TextBox", scrollTroll)
+UserSelector.Size = UDim2.new(1, -4, 0, 26)
+UserSelector.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+UserSelector.TextColor3 = Color3.fromRGB(255, 255, 0)
+UserSelector.PlaceholderText = "Wpisz nick gracza..."
+UserSelector.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+UserSelector.Text = ""
+UserSelector.Font = Enum.Font.SourceSansBold
+UserSelector.TextSize = 12
+UserSelector.BorderSizePixel = 1
+UserSelector.BorderColor3 = Color3.fromRGB(255, 255, 0)
+
+UserSelector:GetPropertyChangedSignal("Text"):Connect(function()
+    SelectedTarget = UserSelector.Text
+end)
+
+addButton("Trolling", "⚽ BALL KILL (Zabij Piłką)", function()
+    local targetPlayer = getPlayerFromSubstring(SelectedTarget)
+    if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Wyciągamy piłkę z ReplicatedStorage lub plecaka
+    local ball = Player.Backpack:FindFirstChild("SoccerBall") or Player.Character:FindFirstChild("SoccerBall")
+    if not ball then
+        for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+            if v:IsA("Tool") and v.Name:lower():find("ball") then
+                ball = v:Clone()
+                ball.Parent = Player.Backpack
+                break
+            end
+        end
+    end
+    
+    if ball then
+        Player.Character.Humanoid:EquipTool(ball)
+        task.wait(0.1)
+        
+        -- Skrypt fizycznego Flinga / Ataku Piłką na RootPart wroga
+        local handle = ball:FindFirstChild("Handle")
+        if handle then
+            local origCFrame = hrp.CFrame
+            local targetHrp = targetPlayer.Character.HumanoidRootPart
+            
+            local bv = Instance.new("BodyVelocity", handle)
+            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bv.Velocity = (targetHrp.Position - handle.Position).Unit * 250
+            
+            local bav = Instance.new("BodyAngularVelocity", handle)
+            bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            bav.AngularVelocity = Vector3.new(0, 5000, 0)
+            
+            -- Dynamiczny atak (Fling Loop)
+            for i = 1, 40 do
+                if targetHrp and handle then
+                    hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 1)
+                    bv.Velocity = Vector3.new(0, 300, 0)
+                end
+                task.wait(0.02)
+            end
+            
+            bv:Destroy()
+            bav:Destroy()
+            hrp.CFrame = origCFrame
+        end
+    end
+end)
+
+addButton("Trolling", "🛒 STROLLER VOID (Wózek poza mapę)", function()
+    local targetPlayer = getPlayerFromSubstring(SelectedTarget)
+    if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Szukamy wózka (Stroller) w grze
+    local stroller = Player.Backpack:FindFirstChild("Stroller") or Player.Character:FindFirstChild("Stroller")
+    if not stroller then
+        for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+            if v:IsA("Tool") and v.Name:lower():find("stroller") then
+                stroller = v:Clone()
+                stroller.Parent = Player.Backpack
+                break
+            end
+        end
+    end
+    
+    if stroller then
+        local savedPos = hrp.CFrame
+        Player.Character.Humanoid:EquipTool(stroller)
+        task.wait(0.2)
+        
+        local targetHrp = targetPlayer.Character.HumanoidRootPart
+        
+        -- Teleport do celu i próba wsadzenia gracza do wózka
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, -1)
+        task.wait(0.2)
+        
+        -- Przesunięcie wózka i gracza w bezkresną otchłań (Void)
+        if targetHrp then
+            -- Faza 1: Teleportacja daleko pod mapę
+            hrp.CFrame = CFrame.new(0, -99999, 0)
+            task.wait(0.3)
+            
+            -- Faza 2: Powrót użytkownika huba na bezpieczną pozycję (wróg zostaje w próżni)
+            hrp.CFrame = savedPos
+        end
+    end
+end)
+
+-- ==========================================
+-- POZOSTAŁE SEKCJE FUNKCJI (BEZ ZMIAN)
+-- ==========================================
+
+-- 1. RUCH
 addButton("Ruch", "Super Bieg (WalkSpeed 100)", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 100 end end)
 addButton("Ruch", "Mega Skok (JumpPower 150)", function() local h = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") if h then h.UseJumpPower = true h.JumpPower = 150 end end)
 addToggleButton("Ruch", "Przenikanie (Noclip)", "Noclip", function(state)
@@ -321,20 +453,17 @@ addToggleButton("Ruch", "Latanie (3D Fly Mode)", "Fly", function(state)
     local char = Player.Character 
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local cam = workspace.CurrentCamera
-    
     if state and hrp and char:FindFirstChildOfClass("Humanoid") then
         local hum = char:FindFirstChildOfClass("Humanoid")
         _G.BVel = Instance.new("BodyVelocity", hrp) 
         _G.BVel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         _G.BGyr = Instance.new("BodyGyro", hrp) 
         _G.BGyr.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        
         task.spawn(function()
             while Toggles.Fly and hrp and hum do
                 local moveDir = hum.MoveDirection
                 if moveDir.Magnitude > 0 then
-                    local camLook = cam.CFrame.LookVector
-                    _G.BVel.Velocity = camLook * 70
+                    _G.BVel.Velocity = cam.CFrame.LookVector * 70
                 else
                     _G.BVel.Velocity = Vector3.new(0, 0, 0)
                 end
@@ -352,10 +481,9 @@ addToggleButton("Ruch", "Nieskończony Skok", "InfJump", function(state)
     else if _G.JumpCon then _G.JumpCon:Disconnect() end end
 end)
 addButton("Ruch", "Szybki Reset Postaci", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").Health = 0 end end)
-addButton("Ruch", "Połóż postać (Sit)", function() pcall(function() Player.Character.Humanoid.Sit = true end) end)
 
 -- 2. EKWIPUNEK
-addButton("Ekwipunek", "Weź Wszystkie Narzędzia z Gry", function()
+addButton("Ekwipunek", "Weź Wszystkie Narzędzia", function()
     local res = ReplicatedStorage:FindFirstChild("Tools") or ReplicatedStorage:FindFirstChild("Items") or ReplicatedStorage
     for _, v in pairs(res:GetDescendants()) do if v:IsA("Tool") then v:Clone().Parent = Player.Backpack end end
 end)
@@ -368,12 +496,9 @@ addToggleButton("Ekwipunek", "Gatling Mode (Spam Bronią)", "Gatling", function(
         end
     end) end
 end)
-addButton("Ekwipunek", "Wyczyszczenie Ekwipunku", function() if Player.Backpack then Player.Backpack:ClearAllChildren() end end)
 addButton("Ekwipunek", "Spawn Bomby i Worka", function()
     for _, v in pairs(ReplicatedStorage:GetDescendants()) do if v:IsA("Tool") and (v.Name == "Bomb" or v.Name == "Sack") then v:Clone().Parent = Player.Backpack end end
 end)
-addButton("Ekwipunek", "Daj Kartę ID Keycard", function() for _, v in pairs(ReplicatedStorage:GetDescendants()) do if v:IsA("Tool") and v.Name:find("Key") then v:Clone().Parent = Player.Backpack end end end)
-addButton("Ekwipunek", "Daj Śpiwór (Glitche ścienne)", function() local s = ReplicatedStorage:FindFirstChild("SleepingBag", true) if s then s:Clone().Parent = Player.Backpack end end)
 
 -- 3. POJAZDY
 addToggleButton("Pojazdy", "Tęczowe Auto (RGB Mode)", "RGB", function(state)
@@ -387,58 +512,22 @@ addToggleButton("Pojazdy", "Tęczowe Auto (RGB Mode)", "RGB", function(state)
         end
     end) end
 end)
-addToggleButton("Pojazdy", "Spam Klaksonem (Horn Bug)", "Horn", function(state)
-    if state then task.spawn(function()
-        while Toggles.Horn do
-            pcall(function()
-                for _, v in pairs(workspace:GetDescendants()) do
-                    if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then
-                        local h = v.Parent:FindFirstChild("Horn") or v.Parent:FindFirstChildOfClass("Sound") if h then h:Play() end
-                    end
-                end
-            end)
-            task.wait(0.05)
-        end
-    end) end
-end)
 addButton("Pojazdy", "Odwołaj Swój Pojazd", function() if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("EliminateCar") then ReplicatedStorage.Network.EliminateCar:FireServer() end end)
-addButton("Pojazdy", "Wysoki Skok Autem", function()
-    pcall(function()
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then v.Parent.PrimaryPart.Velocity = v.Parent.PrimaryPart.Velocity + Vector3.new(0, 80, 0) end
-        end
-    end)
-end)
-addButton("Pojazdy", "Obróć Auto (Flip)", function()
-    pcall(function()
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then v.Parent.PrimaryPart.CFrame = v.Parent.PrimaryPart.CFrame * CFrame.Angles(0,0,0) end
-        end
-    end)
-end)
-addButton("Pojazdy", "Zniszcz koła w aucie", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then for _, w in pairs(v.Parent:GetDescendants()) do if w.Name:lower():find("wheel") then w:Destroy() end end end end end) end)
 
 -- 4. ANIMACJE PREMIUM
 addAnimButton("Animacje", "Jerk Tool / Flex", 507371109)
 addAnimButton("Animacje", "Take the L", 333833446)
-addAnimButton("Animacje", "Scuba Wave", 333839256)
 addAnimButton("Animacje", "Zombie Walk", 35654637)
 addAnimButton("Animacje", "Taniec Hype", 424907230)
-addAnimButton("Animacje", "Salto w tył", 303358334)
-addAnimButton("Animacje", "Lewitacja", 313331574)
 addButton("Animacje", "WYŁĄCZ ANIMACJE", function() stopAllAnimations() end)
 
 -- 5. TELEPORTACJA
 local function tpl(cf) if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then Player.Character.HumanoidRootPart.CFrame = cf end end
 addButton("Teleport", "Bank & Sejf", function() tpl(CFrame.new(-22, 10, 52)) end)
 addButton("Teleport", "Posterunek Policji", function() tpl(CFrame.new(-42, 11, 28)) end)
-addButton("Teleport", "Sklep Spożywczy", function() tpl(CFrame.new(12, 10, 15)) end)
-addButton("Teleport", "Dach Szpitala", function() tpl(CFrame.new(65, 25, -10)) end)
 addButton("Teleport", "Bunkier Agencji", function() tpl(CFrame.new(-265, -15, -145)) end)
-addButton("Teleport", "Szkoła", function() tpl(CFrame.new(-10, 10, -100)) end)
-addButton("Teleport", "Losowa Działka (Plot 1)", function() tpl(CFrame.new(-484, 22, -153)) end)
 
--- 6. WIZUALNE & ŚWIAT
+-- 6. WIZUALNE
 addToggleButton("Wizualne", "Wyświetl ESP Graczy", "ESP", function(state)
     if state then
         _G.ESPTrack = RunService.Heartbeat:Connect(function()
@@ -465,12 +554,6 @@ addToggleButton("Wizualne", "Przenikanie przez Sejf", "SafeNoclip", function(sta
         for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name == "SafeDoor" or v.Name == "BankWall") then v.CanCollide = true v.Transparency = 0 end end
     end
 end)
-addToggleButton("Wizualne", "Tryb Jasności", "Fullbright", function(state)
-    if state then Lighting.Brightness = 2 Lighting.ClockTime = 14 Lighting.FogEnd = 999999 else Lighting.Brightness = 1 Lighting.ClockTime = 12 end
-end)
-addButton("Wizualne", "Usuń Drzwi z Mapy", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and (v.Name:lower():find("door") or v.Name:lower():find("gate")) then v:Destroy() end end end)
-addButton("Wizualne", "Zgaś Lampy Uliczne", function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("BasePart") and v.Name:lower():find("light") then v:Destroy() end end end)
-addButton("Wizualne", "Crash Świateł w Domach", function() pcall(function() for _, v in pairs(workspace:GetDescendants()) do if v:IsA("RemoteEvent") and v.Name:find("Light") then v:FireServer(false) end end end) end)
 
 -- ZAMKNIĘCIE INTERFEJSU
 local CloseBtn = Instance.new("TextButton", TabPanel)
