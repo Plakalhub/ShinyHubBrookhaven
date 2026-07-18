@@ -1,5 +1,7 @@
 --[[
-    ShinyHub V5 - MATRIX FLING + NATIWE RGB + CUSTOM SPEED (2026)
+    ShinyHub V5 - BROOKHAVEN GAMEPASS RGB FIX + CUSTOM SPEED (2026)
+    - NAPRAWIONO: Losowanie zaawansowanych kolorów (Gamepass Custom Color)
+    - NAPRAWIONO: Błędy składniowe w Fly Car
 ]]
 
 local Players = game:GetService("Players")
@@ -10,20 +12,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local SelectedTarget = ""
-local CustomCarSpeed = 200
-
-local BrookhavenColors = {
-    Color3.fromRGB(255, 0, 0),
-    Color3.fromRGB(255, 127, 0),
-    Color3.fromRGB(255, 255, 0),
-    Color3.fromRGB(0, 255, 0),
-    Color3.fromRGB(0, 255, 255),
-    Color3.fromRGB(0, 0, 255),
-    Color3.fromRGB(127, 0, 255),
-    Color3.fromRGB(255, 0, 255),
-    Color3.fromRGB(255, 255, 255),
-    Color3.fromRGB(0, 0, 0)
-}
+local CustomCarSpeed = 400
 
 if CoreGui:FindFirstChild("ShinyHubPremium") then 
     pcall(function() CoreGui.ShinyHubPremium:Destroy() end) 
@@ -73,7 +62,6 @@ RunService.Stepped:Connect(function()
         end
     end
     
-    -- Aktywne modyfikowanie MaxSpeed pojazdu w każdej klatce fizyki
     local car, seat = getPlayerVehicle()
     if car and seat and seat:IsA("VehicleSeat") then
         seat.MaxSpeed = CustomCarSpeed
@@ -125,7 +113,7 @@ local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(10, 10, 10)
-Title.Text = "  ★ SHINYHUB V5 [SPEED UPDATE] ★"
+Title.Text = "  ★ SHINYHUB V5 [GAMEPASS RGB FIX] ★"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -349,11 +337,10 @@ end)
 addToggleButton("Ruch Gracza", "Noclip", "Noclip", function(state) end)
 
 -- ==========================================
--- ZAKŁADKA POJAZDY (DODANO MANSZ PRĘDKOŚĆ)
+-- ZAKŁADKA POJAZDY
 -- ==========================================
 local scrollVehicles = tabs["Pojazdy"].scroll
 
--- NOWE POLE TEKSTOWE DLA PRĘDKOŚCI AUTA (DOSTOSOWANIE LIMITU)
 local SpeedLabel = Instance.new("TextLabel", scrollVehicles)
 SpeedLabel.Size = UDim2.new(1, -6, 0, 20)
 SpeedLabel.BackgroundTransparency = 1
@@ -367,8 +354,8 @@ local SpeedInput = Instance.new("TextBox", scrollVehicles)
 SpeedInput.Size = UDim2.new(1, -6, 0, 34)
 SpeedInput.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 0)
-SpeedInput.PlaceholderText = "Wpisz prędkość (domyślnie 200)..."
-SpeedInput.Text = "400" -- Domyślnie zmienione na żądane 400
+SpeedInput.PlaceholderText = "Wpisz prędkość..."
+SpeedInput.Text = "400"
 SpeedInput.Font = Enum.Font.GothamBold
 SpeedInput.TextSize = 13
 Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 4)
@@ -376,9 +363,7 @@ local speedStroke = Instance.new("UIStroke", SpeedInput) speedStroke.Color = Col
 
 SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
     local num = tonumber(SpeedInput.Text)
-    if num then
-        CustomCarSpeed = num
-    end
+    if num then CustomCarSpeed = num end
 end)
 
 addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
@@ -390,11 +375,15 @@ addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
                 if car and seat then
                     local bodyPart = car:FindFirstChild("Body") or seat
                     if not bodyPart:FindFirstChild("CarFlyVel") then
-                        local bv = Instance.new("BodyVelocity") bv.Name = "CarFlyVel" bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) bodyPart.CarFlyVel = bv
-                        local bg = Instance.new("BodyGyro") bg.Name = "CarFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bodyPart.CarFlyGyr = bg
+                        local bv = Instance.new("BodyVelocity") bv.Name = "CarFlyVel" bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) bv.Parent = bodyPart
+                        local bg = Instance.new("BodyGyro") bg.Name = "CarFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bg.Parent = bodyPart
                     end
-                    bodyPart.CarFlyGyr.CFrame = cam.CFrame
-                    if seat.Throttle ~= 0 then bodyPart.CarFlyVel.Velocity = cam.CFrame.LookVector * (seat.Throttle * 120) else bodyPart.CarFlyVel.Velocity = Vector3.new(0,0,0) end
+                    if bodyPart:FindFirstChild("CarFlyGyr") then bodyPart.CarFlyGyr.CFrame = cam.CFrame end
+                    if seat.Throttle ~= 0 and bodyPart:FindFirstChild("CarFlyVel") then 
+                        bodyPart.CarFlyVel.Velocity = cam.CFrame.LookVector * (seat.Throttle * 120) 
+                    elseif bodyPart:FindFirstChild("CarFlyVel") then 
+                        bodyPart.CarFlyVel.Velocity = Vector3.new(0,0,0) 
+                    end
                 else break end
                 task.wait()
             end
@@ -404,22 +393,21 @@ end)
 
 addToggleButton("Pojazdy", "Noclip Car", "NoclipCar", function(state) end)
 
+-- NAPRAWIONE PURE GAMEPASS RGB (Losowe zaawansowane kolory z palety Brookhaven)
 addToggleButton("Pojazdy", "Tęczowe Auto (RGB)", "RGB", function(state)
     if state then 
         task.spawn(function()
-            local colorIndex = 1
+            math.randomseed(os.time())
             while Toggles.RGB do
                 local car = getPlayerVehicle()
                 if car and ReplicatedStorage:FindFirstChild("Network") then 
-                    local targetColor = BrookhavenColors[colorIndex]
-                    ReplicatedStorage.Network.ColorCar:FireServer(car, targetColor)
+                    -- Losowanie koloru bezpośrednio przez system zaawansowanej palety gamepassowej Brookhaven
+                    local randomColor = Color3.fromHSV(math.random(), 1, 1)
                     
-                    colorIndex = colorIndex + 1
-                    if colorIndex > #BrookhavenColors then 
-                        colorIndex = 1 
-                    end
+                    -- Zdalny Event Brookhaven przyjmuje Color3 do nadpisania niestandardowego koloru z GUI
+                    ReplicatedStorage.Network.ColorCar:FireServer(car, randomColor)
                 end
-                task.wait(0.06)
+                task.wait(0.04) -- Ultra szybki spam losowymi barwami
             end
         end) 
     end
