@@ -1,7 +1,5 @@
 --[[
-    ShinyHub V5 - ULTRA INSTANT SIMULTANEOUS FLING (2026)
-    - MULTI-TARGET INSTANT TELEPORT: Uderza we wszystkie cele praktycznie w jednej klatce.
-    - MAXIMUM KINETIC ENERGY: Ekstremalny obrót fizyki autobusu szkolnego.
+    ShinyHub V5 - MATRIX FLING + NATIWE RGB + CUSTOM SPEED (2026)
 ]]
 
 local Players = game:GetService("Players")
@@ -12,14 +10,20 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local SelectedTarget = ""
-local currentHue = 0
+local CustomCarSpeed = 200
 
-task.spawn(function()
-    while true do
-        currentHue = (tick() % 4) / 4
-        task.wait()
-    end
-end)
+local BrookhavenColors = {
+    Color3.fromRGB(255, 0, 0),
+    Color3.fromRGB(255, 127, 0),
+    Color3.fromRGB(255, 255, 0),
+    Color3.fromRGB(0, 255, 0),
+    Color3.fromRGB(0, 255, 255),
+    Color3.fromRGB(0, 0, 255),
+    Color3.fromRGB(127, 0, 255),
+    Color3.fromRGB(255, 0, 255),
+    Color3.fromRGB(255, 255, 255),
+    Color3.fromRGB(0, 0, 0)
+}
 
 if CoreGui:FindFirstChild("ShinyHubPremium") then 
     pcall(function() CoreGui.ShinyHubPremium:Destroy() end) 
@@ -68,10 +72,16 @@ RunService.Stepped:Connect(function()
             end
         end
     end
+    
+    -- Aktywne modyfikowanie MaxSpeed pojazdu w każdej klatce fizyki
+    local car, seat = getPlayerVehicle()
+    if car and seat and seat:IsA("VehicleSeat") then
+        seat.MaxSpeed = CustomCarSpeed
+    end
 end)
 
 -- ==========================================
--- INTERFEJS GRAFICZNY (CZARNY / ŻÓŁTY NEON)
+-- INTERFEJS GRAFICZNY
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShinyHubPremium"
@@ -115,7 +125,7 @@ local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(10, 10, 10)
-Title.Text = "  ★ SHINYHUB V5 [MEGA FAST FLING] ★"
+Title.Text = "  ★ SHINYHUB V5 [SPEED UPDATE] ★"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -211,7 +221,7 @@ createTab("Ruch Gracza")
 createTab("Pojazdy")
 
 -- ==========================================
--- ZAKŁADKA TROLLING (SYMULTANICZNY FLING)
+-- ZAKŁADKA TROLLING
 -- ==========================================
 local scrollTroll = tabs["Trolling"].scroll
 
@@ -228,31 +238,31 @@ local boxStroke = Instance.new("UIStroke", UserSelector) boxStroke.Color = Color
 
 UserSelector:GetPropertyChangedSignal("Text"):Connect(function() SelectedTarget = UserSelector.Text end)
 
-addButton("Trolling", "💥 ULTRA SIMULTANEOUS BUS FLING", function()
+addButton("Trolling", "⚡ <0.1s ASYNC MATRIX BUS FLING", function()
     local targets = getTargets(SelectedTarget)
     if #targets == 0 then return end
     
     if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("RemoveVehicle") then
         ReplicatedStorage.Network.RemoveVehicle:FireServer()
     end
-    task.wait(0.1)
+    task.wait(0.05)
     
     if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SpawnVehicle") then
         ReplicatedStorage.Network.SpawnVehicle:FireServer("Bus", Player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 2, -10), Color3.fromRGB(255,255,0))
     end
     
     local car, seat
-    for i = 1, 20 do
+    for i = 1, 30 do
         car, seat = getPlayerVehicle()
         if car and seat then 
             seat:Sit(Player.Character:FindFirstChildOfClass("Humanoid"))
             break 
         end
-        task.wait(0.04)
+        task.wait(0.02)
     end
     
     if not car or not seat then return end
-    task.wait(0.1)
+    task.wait(0.05)
     
     local bodyPart = car:FindFirstChild("Body") or seat
     local char = Player.Character
@@ -261,33 +271,33 @@ addButton("Trolling", "💥 ULTRA SIMULTANEOUS BUS FLING", function()
         if part:IsA("BasePart") then part.CanCollide = false end
     end
     
-    -- Agresywne wymuszenie rotacji serwerowej
     local bAV = Instance.new("BodyAngularVelocity")
     bAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bAV.AngularVelocity = Vector3.new(0, 9999999, 0)
+    bAV.AngularVelocity = Vector3.new(0, 999999999, 0)
     bAV.Parent = bodyPart
     
     local bV = Instance.new("BodyVelocity")
     bV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bV.Velocity = Vector3.new(0, 0, 0)
+    bV.Velocity = Vector3.new(0, 999999999, 0)
     bV.Parent = bodyPart
 
-    -- Pętla masowa: Teleportuje w jednej klatce do każdego po kolei przez 15 cykli
-    task.spawn(function()
-        for cycle = 1, 15 do
-            for _, tPlayer in pairs(targets) do
-                if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local targetHrp = tPlayer.Character.HumanoidRootPart
+    for _, tPlayer in pairs(targets) do
+        if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHrp = tPlayer.Character.HumanoidRootPart
+            task.spawn(function()
+                for frame = 1, 4 do
                     if targetHrp and bodyPart then
-                        bodyPart.CFrame = targetHrp.CFrame * CFrame.new(0, -0.5, 0)
+                        bodyPart.CFrame = targetHrp.CFrame * CFrame.new(0, -0.2, 0)
                     end
+                    RunService.Heartbeat:Wait()
                 end
-            end
-            RunService.Heartbeat:Wait() -- Zmiana pozycji natychmiast co odświeżenie fizyki
+            end)
         end
-        
-        bAV:Destroy()
-        bV:Destroy()
+    end
+    
+    task.delay(0.2, function()
+        if bAV then bAV:Destroy() end
+        if bV then bV:Destroy() end
     end)
 end)
 
@@ -309,7 +319,7 @@ addButton("Trolling", "🧱 JAIL TARGET (Klatka)", function()
 end)
 
 -- ==========================================
--- ZAKŁADKI RUCH I POJAZDY
+-- ZAKŁADKA RUCH GRACZA
 -- ==========================================
 addButton("Ruch Gracza", "Szybki Bieg (Speed 100)", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 100 end end)
 addButton("Ruch Gracza", "Resetuj Bieg", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16 end end)
@@ -338,6 +348,39 @@ end)
 
 addToggleButton("Ruch Gracza", "Noclip", "Noclip", function(state) end)
 
+-- ==========================================
+-- ZAKŁADKA POJAZDY (DODANO MANSZ PRĘDKOŚĆ)
+-- ==========================================
+local scrollVehicles = tabs["Pojazdy"].scroll
+
+-- NOWE POLE TEKSTOWE DLA PRĘDKOŚCI AUTA (DOSTOSOWANIE LIMITU)
+local SpeedLabel = Instance.new("TextLabel", scrollVehicles)
+SpeedLabel.Size = UDim2.new(1, -6, 0, 20)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+SpeedLabel.Text = "Ustaw własną prędkość auta (np. 400):"
+SpeedLabel.Font = Enum.Font.GothamSemibold
+SpeedLabel.TextSize = 11
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local SpeedInput = Instance.new("TextBox", scrollVehicles)
+SpeedInput.Size = UDim2.new(1, -6, 0, 34)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 0)
+SpeedInput.PlaceholderText = "Wpisz prędkość (domyślnie 200)..."
+SpeedInput.Text = "400" -- Domyślnie zmienione na żądane 400
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextSize = 13
+Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 4)
+local speedStroke = Instance.new("UIStroke", SpeedInput) speedStroke.Color = Color3.fromRGB(255, 255, 0)
+
+SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local num = tonumber(SpeedInput.Text)
+    if num then
+        CustomCarSpeed = num
+    end
+end)
+
 addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
     local cam = workspace.CurrentCamera
     if state then
@@ -347,8 +390,8 @@ addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
                 if car and seat then
                     local bodyPart = car:FindFirstChild("Body") or seat
                     if not bodyPart:FindFirstChild("CarFlyVel") then
-                        local bv = Instance.new("BodyVelocity") bv.Name = "CarFlyVel" bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) bv.Parent = bodyPart
-                        local bg = Instance.new("BodyGyro") bg.Name = "CarFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bg.Parent = bodyPart
+                        local bv = Instance.new("BodyVelocity") bv.Name = "CarFlyVel" bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) bodyPart.CarFlyVel = bv
+                        local bg = Instance.new("BodyGyro") bg.Name = "CarFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bodyPart.CarFlyGyr = bg
                     end
                     bodyPart.CarFlyGyr.CFrame = cam.CFrame
                     if seat.Throttle ~= 0 then bodyPart.CarFlyVel.Velocity = cam.CFrame.LookVector * (seat.Throttle * 120) else bodyPart.CarFlyVel.Velocity = Vector3.new(0,0,0) end
@@ -362,13 +405,24 @@ end)
 addToggleButton("Pojazdy", "Noclip Car", "NoclipCar", function(state) end)
 
 addToggleButton("Pojazdy", "Tęczowe Auto (RGB)", "RGB", function(state)
-    if state then task.spawn(function()
-        while Toggles.RGB do
-            local car = getPlayerVehicle()
-            if car and ReplicatedStorage:FindFirstChild("Network") then ReplicatedStorage.Network.ColorCar:FireServer(car, Color3.fromHSV(currentHue, 1, 1)) end
-            task.wait(0.05)
-        end
-    end) end
+    if state then 
+        task.spawn(function()
+            local colorIndex = 1
+            while Toggles.RGB do
+                local car = getPlayerVehicle()
+                if car and ReplicatedStorage:FindFirstChild("Network") then 
+                    local targetColor = BrookhavenColors[colorIndex]
+                    ReplicatedStorage.Network.ColorCar:FireServer(car, targetColor)
+                    
+                    colorIndex = colorIndex + 1
+                    if colorIndex > #BrookhavenColors then 
+                        colorIndex = 1 
+                    end
+                end
+                task.wait(0.06)
+            end
+        end) 
+    end
 end)
 
 local CloseBtn = Instance.new("TextButton", TabPanel)
