@@ -1,7 +1,7 @@
 --[[
-    ShinyHub V5 - Brookhaven Mobile Compact & SERVER-SIDE CAR FLING (2026)
-    - MASS CAR FLING: Używa fizyki auta (Network Ownership) do prawdziwego wywalania graczy na serwerze!
-    - Jak używać: Wsiądź do auta jako kierowca, wpisz 'all' lub nick i kliknij "CAR MASS FLING".
+    ShinyHub V5 - School Bus INSTANT FLING Edition (2026)
+    - RAPID TELEPORT: Ekstremalnie szybkie przeskakiwanie między graczami, zanim zdążą zareagować.
+    - AUTOMATIC SCHOOL BUS SPAWN: Skrypt sam spawnuje autobus i wsadza Cię do niego.
 ]]
 
 local Players = game:GetService("Players")
@@ -21,25 +21,12 @@ task.spawn(function()
     end
 end)
 
-if CoreGui:FindFirstChild("ShinyHubMenu") then 
-    pcall(function() CoreGui.ShinyHubMenu:Destroy() end) 
+if CoreGui:FindFirstChild("ShinyHubPremium") then 
+    pcall(function() CoreGui.ShinyHubPremium:Destroy() end) 
 end
 
-local Toggles = { Noclip = false, Fly = false, InfJump = false, Gatling = false, RGB = false, FlyCar = false, NoclipCar = false }
-local ActiveAnimations = {}
+local Toggles = { Noclip = false, Fly = false, RGB = false, FlyCar = false, NoclipCar = false }
 
--- Pobieranie auta, w którym siedzisz
-local function getCurrentVehicle()
-    if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
-        local seat = Player.Character:FindFirstChildOfClass("Humanoid").SeatPart
-        if seat and seat:IsA("VehicleSeat") and seat.Parent then
-            return seat.Parent, seat
-        end
-    end
-    return nil, nil
-end
-
--- Pobieranie celów (wspiera 'all')
 local function getTargets(str)
     local targets = {}
     if str:lower() == "all" then
@@ -57,20 +44,52 @@ local function getTargets(str)
     return targets
 end
 
+local function getPlayerVehicle()
+    for _, v in pairs(workspace:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == Player then
+            local seat = v:FindFirstChildOfClass("VehicleSeat") or v:FindFirstChild("DriveSeat", true)
+            return v, seat
+        end
+    end
+    return nil, nil
+end
+
+RunService.Stepped:Connect(function()
+    if Toggles.Noclip and Player.Character then
+        for _, part in pairs(Player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+    if Toggles.NoclipCar then
+        local car = getPlayerVehicle()
+        if car then
+            for _, part in pairs(car:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end
+end)
+
 -- ==========================================
 -- INTERFEJS GRAFICZNY
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ShinyHubMenu"
+ScreenGui.Name = "ShinyHubPremium"
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0.45, 0, 0.55, 0)
-MainFrame.Position = UDim2.new(0.30, 0, 0.25, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 0)
-MainFrame.BorderSizePixel = 2
+MainFrame.Size = UDim2.new(0, 520, 0, 360)
+MainFrame.Position = UDim2.new(0.3, 0, 0.25, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+MainFrame.BorderSizePixel = 0
+
+local MainCorner = Instance.new("UICorner", MainFrame)
+MainCorner.CornerRadius = UDim.new(0, 8)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 255, 0)
+MainStroke.Thickness = 1.5
 
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
@@ -93,21 +112,28 @@ end
 makeDraggable(MainFrame)
 
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0.10, 0)
+Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
-Title.TextColor3 = Color3.fromRGB(0, 0, 0)
-Title.Text = "★ SHINYHUB V5 (SERVER-SIDE FLING) ★"
-Title.Font = Enum.Font.SourceSansBold
-Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(10, 10, 10)
+Title.Text = "  ★ SHINYHUB V5 [INSTANT BUS FLING] ★"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+local TitleCorner = Instance.new("UICorner", Title)
+TitleCorner.CornerRadius = UDim.new(0, 8)
 
 local TabPanel = Instance.new("Frame", MainFrame)
-TabPanel.Size = UDim2.new(0.28, 0, 0.90, 0)
-TabPanel.Position = UDim2.new(0, 0, 0.10, 0)
-TabPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+TabPanel.Size = UDim2.new(0, 140, 1, -40)
+TabPanel.Position = UDim2.new(0, 0, 0, 40)
+TabPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TabPanel.BorderSizePixel = 0
+
+local TabList = Instance.new("UIListLayout", TabPanel)
+TabList.Padding = UDim.new(0, 2)
 
 local ContentPanel = Instance.new("Frame", MainFrame)
-ContentPanel.Size = UDim2.new(0.70, 0, 0.90, 0)
-ContentPanel.Position = UDim2.new(0.29, 0, 0.10, 0)
+ContentPanel.Size = UDim2.new(1, -150, 1, -50)
+ContentPanel.Position = UDim2.new(0, 145, 0, 45)
 ContentPanel.BackgroundTransparency = 1
 
 local tabs = {}
@@ -115,88 +141,118 @@ local tabCount = 0
 
 local function createTab(name)
     local tabBtn = Instance.new("TextButton", TabPanel)
-    tabBtn.Size = UDim2.new(1, 0, 0, 22)
-    tabBtn.Position = UDim2.new(0, 0, 0, tabCount * 22)
-    tabBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-    tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    tabBtn.Text = name
-    tabBtn.Font = Enum.Font.SourceSansBold
-    tabBtn.TextSize = 10
+    tabBtn.Size = UDim2.new(1, 0, 0, 32)
+    tabBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+    tabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    tabBtn.Text = "  " .. name
+    tabBtn.Font = Enum.Font.GothamBold
+    tabBtn.TextSize = 12
+    tabBtn.TextXAlignment = Enum.TextXAlignment.Left
+    tabBtn.BorderSizePixel = 0
     tabCount = tabCount + 1
     
     local scroll = Instance.new("ScrollingFrame", ContentPanel)
-    scroll.Size = UDim2.new(1, -2, 1, 0)
+    scroll.Size = UDim2.new(1, 0, 1, 0)
     scroll.BackgroundTransparency = 1
     scroll.Visible = false
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 400)
-    scroll.ScrollBarThickness = 2
-    Instance.new("UIListLayout", scroll).Padding = UDim.new(0, 3)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 450)
+    scroll.ScrollBarThickness = 3
+    scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 0)
+    Instance.new("UIListLayout", scroll).Padding = UDim.new(0, 5)
     
     tabBtn.MouseButton1Click:Connect(function()
-        for _, t in pairs(tabs) do t.scroll.Visible = false t.btn.BackgroundColor3 = Color3.fromRGB(24, 24, 24) end
+        for _, t in pairs(tabs) do t.scroll.Visible = false t.btn.BackgroundColor3 = Color3.fromRGB(26, 26, 26) t.btn.TextColor3 = Color3.fromRGB(180, 180, 180) end
         scroll.Visible = true
-        tabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+        tabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        tabBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
     end)
+    
     tabs[name] = {btn = tabBtn, scroll = scroll}
-    if tabCount == 1 then scroll.Visible = true tabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0) end
+    if tabCount == 1 then scroll.Visible = true tabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) tabBtn.TextColor3 = Color3.fromRGB(255, 255, 0) end
     return scroll
 end
 
 local function addButton(tabName, text, callback)
     local btn = Instance.new("TextButton", tabs[tabName].scroll)
-    btn.Size = UDim2.new(1, -4, 0, 26)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.Size = UDim2.new(1, -6, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 11
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 12
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    local stroke = Instance.new("UIStroke", btn) stroke.Color = Color3.fromRGB(40, 40, 40)
+    btn.MouseEnter:Connect(function() stroke.Color = Color3.fromRGB(255, 255, 0) end)
+    btn.MouseLeave:Connect(function() stroke.Color = Color3.fromRGB(40, 40, 40) end)
     btn.MouseButton1Click:Connect(function() pcall(callback) end)
 end
 
 local function addToggleButton(tabName, text, toggleKey, callback)
     local btn = Instance.new("TextButton", tabs[tabName].scroll)
-    btn.Size = UDim2.new(1, -4, 0, 26)
-    btn.BackgroundColor3 = Color3.fromRGB(45, 25, 25)
-    btn.TextColor3 = Color3.fromRGB(255, 120, 120)
-    btn.Text = text .. " [OFF]"
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 10
+    btn.Size = UDim2.new(1, -6, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 20, 20)
+    btn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    btn.Text = text .. " : OFF"
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
     
     btn.MouseButton1Click:Connect(function()
         Toggles[toggleKey] = not Toggles[toggleKey]
-        btn.Text = text .. (Toggles[toggleKey] and " [ON]" or " [OFF]")
-        btn.BackgroundColor3 = Toggles[toggleKey] and Color3.fromRGB(25, 45, 25) or Color3.fromRGB(45, 25, 25)
-        btn.TextColor3 = Toggles[toggleKey] and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(255, 120, 120)
+        btn.Text = text .. (Toggles[toggleKey] and " : ON" or " : OFF")
+        btn.BackgroundColor3 = Toggles[toggleKey] and Color3.fromRGB(20, 35, 20) or Color3.fromRGB(35, 20, 20)
+        btn.TextColor3 = Toggles[toggleKey] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
         pcall(callback, Toggles[toggleKey])
     end)
 end
 
 createTab("Trolling")
-createTab("Ruch/Pojazdy")
+createTab("Ruch Gracza")
+createTab("Pojazdy")
 
 -- ==========================================
--- SEKCJA TROLLINGU
+-- ZAKŁADKA TROLLING (BŁYSKAWICZNY ATTACK)
 -- ==========================================
 local scrollTroll = tabs["Trolling"].scroll
 
 local UserSelector = Instance.new("TextBox", scrollTroll)
-UserSelector.Size = UDim2.new(1, -4, 0, 30)
-UserSelector.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+UserSelector.Size = UDim2.new(1, -6, 0, 34)
+UserSelector.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 UserSelector.TextColor3 = Color3.fromRGB(255, 255, 0)
 UserSelector.PlaceholderText = "Wpisz nick lub 'all'..."
 UserSelector.Text = ""
-UserSelector.Font = Enum.Font.SourceSansBold
+UserSelector.Font = Enum.Font.GothamSemibold
 UserSelector.TextSize = 12
+Instance.new("UICorner", UserSelector).CornerRadius = UDim.new(0, 4)
+local boxStroke = Instance.new("UIStroke", UserSelector) boxStroke.Color = Color3.fromRGB(255, 255, 0)
 
 UserSelector:GetPropertyChangedSignal("Text"):Connect(function() SelectedTarget = UserSelector.Text end)
 
--- PRAWDZIWY SERWEROWY MASS FLING AUTEM
-addButton("Trolling", "🚀 CAR MASS FLING (Wywala serwer!)", function()
-    local car, seat = getCurrentVehicle()
-    if not car or not seat then return end
-    
+addButton("Trolling", "🚌 INSTANT BUS MASS FLING", function()
     local targets = getTargets(SelectedTarget)
     if #targets == 0 then return end
+    
+    if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("RemoveVehicle") then
+        ReplicatedStorage.Network.RemoveVehicle:FireServer()
+    end
+    task.wait(0.15)
+    
+    if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SpawnVehicle") then
+        ReplicatedStorage.Network.SpawnVehicle:FireServer("Bus", Player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 2, -10), Color3.fromRGB(255,255,0))
+    end
+    
+    local car, seat
+    for i = 1, 20 do
+        car, seat = getPlayerVehicle()
+        if car and seat then 
+            seat:Sit(Player.Character:FindFirstChildOfClass("Humanoid"))
+            break 
+        end
+        task.wait(0.05)
+    end
+    
+    if not car or not seat then return end
+    task.wait(0.2)
     
     local bodyPart = car:FindFirstChild("Body") or seat
     local char = Player.Character
@@ -205,9 +261,10 @@ addButton("Trolling", "🚀 CAR MASS FLING (Wywala serwer!)", function()
         if part:IsA("BasePart") then part.CanCollide = false end
     end
     
+    -- Agresywne wartości fizyki rotacyjnej (natychmiastowy fling)
     local bAV = Instance.new("BodyAngularVelocity")
     bAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bAV.AngularVelocity = Vector3.new(0, 999999, 0)
+    bAV.AngularVelocity = Vector3.new(0, 9999999, 0)
     bAV.Parent = bodyPart
     
     local bV = Instance.new("BodyVelocity")
@@ -215,14 +272,16 @@ addButton("Trolling", "🚀 CAR MASS FLING (Wywala serwer!)", function()
     bV.Velocity = Vector3.new(0, 0, 0)
     bV.Parent = bodyPart
 
+    -- Błyskawiczna pętla rażenia: uderzenie trwa tylko ułamek sekundy na gracza
     for _, tPlayer in pairs(targets) do
         if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local targetHrp = tPlayer.Character.HumanoidRootPart
-            for i = 1, 20 do
+            -- Zredukowane do 6 szybkich powtórzeń (bardzo szybki przeskok)
+            for i = 1, 6 do
                 if targetHrp and bodyPart then
                     bodyPart.CFrame = targetHrp.CFrame * CFrame.new(0, -1, 0)
                 end
-                task.wait(0.02)
+                RunService.Heartbeat:Wait() -- Synchronizacja z fizyką gry zamiast stałego task.wait
             end
         end
     end
@@ -231,7 +290,7 @@ addButton("Trolling", "🚀 CAR MASS FLING (Wywala serwer!)", function()
     bV:Destroy()
 end)
 
-addButton("Trolling", "🧱 JAIL TARGET (Klatka z barier)", function()
+addButton("Trolling", "🧱 JAIL TARGET (Klatka)", function()
     local targets = getTargets(SelectedTarget)
     if #targets == 0 then return end
     if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("BuildProp") then
@@ -248,31 +307,42 @@ addButton("Trolling", "🧱 JAIL TARGET (Klatka z barier)", function()
     end
 end)
 
-addButton("Trolling", "🔊 SPAM SOUND (Hałas u wszystkich)", function()
-    local targets = getTargets(SelectedTarget)
-    if #targets == 0 then return end
-    task.spawn(function()
-        for i = 1, 30 do
-            for _, tPlayer in pairs(targets) do
-                if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") and ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("PlaySound") then
-                    ReplicatedStorage.Network.PlaySound:FireServer("Bell", tPlayer.Character.HumanoidRootPart.Position)
-                end
+-- ==========================================
+-- ZAKŁADKI RUCH I POJAZDY
+-- ==========================================
+addButton("Ruch Gracza", "Szybki Bieg (Speed 100)", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 100 end end)
+addButton("Ruch Gracza", "Resetuj Bieg", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16 end end)
+
+addToggleButton("Ruch Gracza", "Latanie Postacią (Fly)", "Fly", function(state)
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    local cam = workspace.CurrentCamera
+    if state then
+        task.spawn(function()
+            local bv = Instance.new("BodyVelocity") bv.Name = "TotalFlyVel" bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) bv.Parent = hrp
+            local bg = Instance.new("BodyGyro") bg.Name = "TotalFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bg.Parent = hrp
+            while Toggles.Fly and char and hrp do
+                bg.CFrame = cam.CFrame
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local moveDir = hum and hum.MoveDirection or Vector3.new(0,0,0)
+                if moveDir.Magnitude > 0 then bv.Velocity = cam.CFrame:VectorToWorldSpace(Vector3.new(moveDir.X, 0, -moveDir.Z).Unit * 70) else bv.Velocity = Vector3.new(0,0.1,0) end
+                task.wait()
             end
-            task.wait(0.04)
-        end
-    end)
+            if hrp:FindFirstChild("TotalFlyVel") then hrp.TotalFlyVel:Destroy() end
+            if hrp:FindFirstChild("TotalFlyGyr") then hrp.TotalFlyGyr:Destroy() end
+        end)
+    end
 end)
 
--- ==========================================
--- SEKCJA RUCH / POJAZDY
--- ==========================================
-addButton("Ruch/Pojazdy", "Super Bieg (Speed 100)", function() if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 100 end end)
-addToggleButton("Ruch/Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
+addToggleButton("Ruch Gracza", "Noclip", "Noclip", function(state) end)
+
+addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
     local cam = workspace.CurrentCamera
     if state then
         task.spawn(function()
             while Toggles.FlyCar do
-                local car, seat = getCurrentVehicle()
+                local car, seat = getPlayerVehicle()
                 if car and seat then
                     local bodyPart = car:FindFirstChild("Body") or seat
                     if not bodyPart:FindFirstChild("CarFlyVel") then
@@ -280,7 +350,7 @@ addToggleButton("Ruch/Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(st
                         local bg = Instance.new("BodyGyro") bg.Name = "CarFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bg.Parent = bodyPart
                     end
                     bodyPart.CarFlyGyr.CFrame = cam.CFrame
-                    if seat.Throttle ~= 0 then bodyPart.CarFlyVel.Velocity = cam.CFrame.LookVector * (seat.Throttle * 100) else bodyPart.CarFlyVel.Velocity = Vector3.new(0,0,0) end
+                    if seat.Throttle ~= 0 then bodyPart.CarFlyVel.Velocity = cam.CFrame.LookVector * (seat.Throttle * 120) else bodyPart.CarFlyVel.Velocity = Vector3.new(0,0,0) end
                 else break end
                 task.wait()
             end
@@ -288,23 +358,25 @@ addToggleButton("Ruch/Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(st
     end
 end)
 
-addToggleButton("Ruch/Pojazdy", "Tęczowe Auto (RGB)", "RGB", function(state)
+addToggleButton("Pojazdy", "Noclip Car", "NoclipCar", function(state) end)
+
+addToggleButton("Pojazdy", "Tęczowe Auto (RGB)", "RGB", function(state)
     if state then task.spawn(function()
         while Toggles.RGB do
-            local car = getCurrentVehicle()
+            local car = getPlayerVehicle()
             if car and ReplicatedStorage:FindFirstChild("Network") then ReplicatedStorage.Network.ColorCar:FireServer(car, Color3.fromHSV(currentHue, 1, 1)) end
             task.wait(0.05)
         end
     end) end
 end)
 
--- ==========================================
--- PRZYCISK ZAMKNIĘCIA MENU
--- ==========================================
 local CloseBtn = Instance.new("TextButton", TabPanel)
-CloseBtn.Size = UDim2.new(1, 0, 0, 24)
-CloseBtn.Position = UDim2.new(0, 0, 1, -24)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+CloseBtn.Size = UDim2.new(1, 0, 0, 32)
+CloseBtn.Position = UDim2.new(0, 0, 1, -32)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Text = "WYŁĄCZ HUB"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 11
+CloseBtn.BorderSizePixel = 0
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
