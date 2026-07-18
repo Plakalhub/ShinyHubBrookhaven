@@ -1,9 +1,10 @@
 --[[
-    ShinyHub V5 - Brookhaven Mobile Compact & Troll Edition (2026)
+    ShinyHub V5 - Brookhaven Mobile Compact & Troll Edition (2026) - FIXED & CAR EXTRAS
     - COMPACT GUI: Zoptymalizowane skalowanie pod telefony.
     - RP NAME FIX: Bezpieczna pętla sprawdzająca i nadająca nick RP.
     - FLY FIX: Stabilne latanie 3D kierowane kamerą.
-    - TROLLING UPDATE: Ball Kill, Stroller Void oraz system wyboru gracza (Target).
+    - TROLLING UPDATE: Poprawiony Ball Kill oraz Stroller Void.
+    - CAR UPDATE: Dodano Fly Car oraz Noclip Car w sekcji "Pojazdy".
 ]]
 
 local Players = game:GetService("Players")
@@ -49,7 +50,8 @@ end
 
 local Toggles = {
     Noclip = false, Fly = false, InfJump = false, Gatling = false,
-    RGB = false, Horn = false, ESP = false, SafeNoclip = false, Fullbright = false
+    RGB = false, Horn = false, ESP = false, SafeNoclip = false, Fullbright = false,
+    FlyCar = false, NoclipCar = false
 }
 
 local ActiveAnimations = {}
@@ -60,6 +62,17 @@ task.spawn(function()
         task.wait()
     end
 end)
+
+-- Funkcja pomocnicza do wyszukiwania pojazdu gracza
+local function getCurrentVehicle()
+    if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+        local seat = Player.Character:FindFirstChildOfClass("Humanoid").SeatPart
+        if seat and seat:IsA("VehicleSeat") and seat.Parent then
+            return seat.Parent, seat
+        end
+    end
+    return nil, nil
+end
 
 -- Funkcja pomocnicza do wyszukiwania gracza po skróconym nicku
 local function getPlayerFromSubstring(str)
@@ -342,9 +355,9 @@ addButton("Trolling", "⚽ BALL KILL (Zabij Piłką)", function()
     
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
     
-    -- Wyciągamy piłkę z ReplicatedStorage lub plecaka
     local ball = Player.Backpack:FindFirstChild("SoccerBall") or Player.Character:FindFirstChild("SoccerBall")
     if not ball then
         for _, v in pairs(ReplicatedStorage:GetDescendants()) do
@@ -357,36 +370,36 @@ addButton("Trolling", "⚽ BALL KILL (Zabij Piłką)", function()
     end
     
     if ball then
-        Player.Character.Humanoid:EquipTool(ball)
+        hum:EquipTool(ball)
         task.wait(0.1)
         
-        -- Skrypt fizycznego Flinga / Ataku Piłką na RootPart wroga
-        local handle = ball:FindFirstChild("Handle")
-        if handle then
-            local origCFrame = hrp.CFrame
-            local targetHrp = targetPlayer.Character.HumanoidRootPart
-            
-            local bv = Instance.new("BodyVelocity", handle)
-            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            bv.Velocity = (targetHrp.Position - handle.Position).Unit * 250
-            
-            local bav = Instance.new("BodyAngularVelocity", handle)
-            bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-            bav.AngularVelocity = Vector3.new(0, 5000, 0)
-            
-            -- Dynamiczny atak (Fling Loop)
-            for i = 1, 40 do
-                if targetHrp and handle then
-                    hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 1)
-                    bv.Velocity = Vector3.new(0, 300, 0)
+        local targetHrp = targetPlayer.Character.HumanoidRootPart
+        local origCFrame = hrp.CFrame
+        
+        local bV = Instance.new("BodyVelocity", hrp)
+        bV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bV.Velocity = Vector3.new(9999, 9999, 9999)
+        
+        local bAV = Instance.new("BodyAngularVelocity", hrp)
+        bAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bAV.AngularVelocity = Vector3.new(9999, 9999, 9999)
+        
+        for i = 1, 30 do
+            if targetHrp and hrp then
+                hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 0.2)
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
                 end
-                task.wait(0.02)
             end
-            
-            bv:Destroy()
-            bav:Destroy()
-            hrp.CFrame = origCFrame
+            task.wait(0.02)
         end
+        
+        bV:Destroy()
+        bAV:Destroy()
+        hrp.Velocity = Vector3.new(0,0,0)
+        hrp.RotVelocity = Vector3.new(0,0,0)
+        task.wait(0.1)
+        hrp.CFrame = origCFrame
     end
 end)
 
@@ -398,9 +411,9 @@ addButton("Trolling", "🛒 STROLLER VOID (Wózek poza mapę)", function()
     
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
     
-    -- Szukamy wózka (Stroller) w grze
     local stroller = Player.Backpack:FindFirstChild("Stroller") or Player.Character:FindFirstChild("Stroller")
     if not stroller then
         for _, v in pairs(ReplicatedStorage:GetDescendants()) do
@@ -414,29 +427,24 @@ addButton("Trolling", "🛒 STROLLER VOID (Wózek poza mapę)", function()
     
     if stroller then
         local savedPos = hrp.CFrame
-        Player.Character.Humanoid:EquipTool(stroller)
+        hum:EquipTool(stroller)
         task.wait(0.2)
         
         local targetHrp = targetPlayer.Character.HumanoidRootPart
         
-        -- Teleport do celu i próba wsadzenia gracza do wózka
         hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, -1)
-        task.wait(0.2)
+        task.wait(0.3)
         
-        -- Przesunięcie wózka i gracza w bezkresną otchłań (Void)
         if targetHrp then
-            -- Faza 1: Teleportacja daleko pod mapę
-            hrp.CFrame = CFrame.new(0, -99999, 0)
-            task.wait(0.3)
-            
-            -- Faza 2: Powrót użytkownika huba na bezpieczną pozycję (wróg zostaje w próżni)
+            hrp.CFrame = CFrame.new(0, -350, 0)
+            task.wait(0.4)
             hrp.CFrame = savedPos
         end
     end
 end)
 
 -- ==========================================
--- POZOSTAŁE SEKCJE FUNKCJI (BEZ ZMIAN)
+-- POZOSTAŁE SEKCJE FUNKCJI
 -- ==========================================
 
 -- 1. RUCH
@@ -505,14 +513,88 @@ addToggleButton("Pojazdy", "Tęczowe Auto (RGB Mode)", "RGB", function(state)
     if state then task.spawn(function()
         while Toggles.RGB do
             pcall(function()
-                local seat = nil for _, v in pairs(workspace:GetDescendants()) do if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == Player.Character then seat = v break end end
-                if seat and seat.Parent and ReplicatedStorage:FindFirstChild("Network") then ReplicatedStorage.Network.ColorCar:FireServer(seat.Parent, Color3.fromHSV(currentHue, 1, 1)) end
+                local car = getCurrentVehicle()
+                if car and ReplicatedStorage:FindFirstChild("Network") then ReplicatedStorage.Network.ColorCar:FireServer(car, Color3.fromHSV(currentHue, 1, 1)) end
             end)
             task.wait(0.05)
         end
     end) end
 end)
 addButton("Pojazdy", "Odwołaj Swój Pojazd", function() if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("EliminateCar") then ReplicatedStorage.Network.EliminateCar:FireServer() end end)
+
+-- NOWOŚĆ: FLY CAR (Latanie autem sterowane kamerą)
+addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
+    local cam = workspace.CurrentCamera
+    if state then
+        task.spawn(function()
+            while Toggles.FlyCar do
+                local car, seat = getCurrentVehicle()
+                if car and seat then
+                    local bodyPart = car:FindFirstChild("Body") or seat
+                    if bodyPart then
+                        if not bodyPart:FindFirstChild("CarFlyVel") then
+                            local bv = Instance.new("BodyVelocity")
+                            bv.Name = "CarFlyVel"
+                            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                            bv.Parent = bodyPart
+                            
+                            local bg = Instance.new("BodyGyro")
+                            bg.Name = "CarFlyGyr"
+                            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                            bg.Parent = bodyPart
+                        end
+                        
+                        local bv = bodyPart.CarFlyVel
+                        local bg = bodyPart.CarFlyGyr
+                        bg.CFrame = cam.CFrame
+                        
+                        if seat.Throttle ~= 0 or seat.Steer ~= 0 then
+                            bv.Velocity = cam.CFrame.LookVector * (seat.Throttle * 80) + cam.CFrame.RightVector * (seat.Steer * 40)
+                        else
+                            bv.Velocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                else
+                    -- Jeśli gracz wyjdzie z auta, sprzątamy instancje
+                    Toggles.FlyCar = false
+                    break
+                end
+                task.wait()
+            end
+            
+            -- Czyszczenie fizyki po wyłączeniu
+            local car, seat = getCurrentVehicle()
+            if car and seat then
+                local bodyPart = car:FindFirstChild("Body") or seat
+                if bodyPart:FindFirstChild("CarFlyVel") then bodyPart.CarFlyVel:Destroy() end
+                if bodyPart:FindFirstChild("CarFlyGyr") then bodyPart.CarFlyGyr:Destroy() end
+            end
+        end)
+    end
+end)
+
+-- NOWOŚĆ: NOCLIP CAR (Przenikanie autem przez ściany)
+addToggleButton("Pojazdy", "Przenikanie Auta (Noclip)", "NoclipCar", function(state)
+    if state then
+        _G.CarNoclipLoop = RunService.Stepped:Connect(function()
+            if Toggles.NoclipCar then
+                local car = getCurrentVehicle()
+                if car then
+                    for _, part in pairs(car:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                else
+                    if _G.CarNoclipLoop then _G.CarNoclipLoop:Disconnect() end
+                    Toggles.NoclipCar = false
+                end
+            end
+        end)
+    else
+        if _G.CarNoclipLoop then _G.CarNoclipLoop:Disconnect() end
+    end
+end)
 
 -- 4. ANIMACJE PREMIUM
 addAnimButton("Animacje", "Jerk Tool / Flex", 507371109)
@@ -569,6 +651,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     stopAllAnimations()
     for k, _ in pairs(Toggles) do Toggles[k] = false end
     if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
+    if _G.CarNoclipLoop then _G.CarNoclipLoop:Disconnect() end
     if _G.BVel then _G.BVel:Destroy() _G.BVel = nil end
     if _G.BGyr then _G.BGyr:Destroy() _G.BGyr = nil end
     if _G.JumpCon then _G.JumpCon:Disconnect() end
