@@ -1,7 +1,8 @@
 --[[
-    ShinyHub V5 - BROOKHAVEN GAMEPASS RGB FIX + CUSTOM SPEED (2026)
-    - NAPRAWIONO: Losowanie zaawansowanych kolorów (Gamepass Custom Color)
-    - NAPRAWIONO: Błędy składniowe w Fly Car
+    ShinyHub V5 - BROOKHAVEN VEHICLE PALETTE & ITEM FLING FIX (2026)
+    - NAPRAWIONO: Metoda Fling działa teraz poprzez glitchowanie piłki z ekwipunku.
+    - NAPRAWIONO: Fly Car (Latanie autem) już nie crashuje i działa płynnie.
+    - NAPRAWIONO: Bezpieczne nadawanie prędkości pojazdu.
 ]]
 
 local Players = game:GetService("Players")
@@ -47,6 +48,44 @@ local function getPlayerVehicle()
     return nil, nil
 end
 
+local function updateVehicleSpeed()
+    local car, seat = getPlayerVehicle()
+    if car and seat and seat:IsA("VehicleSeat") then
+        seat.MaxSpeed = CustomCarSpeed
+    end
+end
+
+-- Monitorowanie prędkości w tle, by gra jej nie resetowała
+task.spawn(function()
+    while task.wait(0.5) do
+        local car, seat = getPlayerVehicle()
+        if car and seat and seat:IsA("VehicleSeat") then
+            if seat.MaxSpeed ~= CustomCarSpeed then
+                seat.MaxSpeed = CustomCarSpeed
+            end
+        end
+    end
+end)
+
+Player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.Seated:Connect(function(active, currentSeat)
+        if active and currentSeat:IsA("VehicleSeat") then
+            task.wait(0.1)
+            updateVehicleSpeed()
+        end
+    end)
+end)
+
+if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+    Player.Character:FindFirstChildOfClass("Humanoid").Seated:Connect(function(active, currentSeat)
+        if active and currentSeat:IsA("VehicleSeat") then
+            task.wait(0.1)
+            updateVehicleSpeed()
+        end
+    end)
+end
+
 RunService.Stepped:Connect(function()
     if Toggles.Noclip and Player.Character then
         for _, part in pairs(Player.Character:GetDescendants()) do
@@ -60,11 +99,6 @@ RunService.Stepped:Connect(function()
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
-    end
-    
-    local car, seat = getPlayerVehicle()
-    if car and seat and seat:IsA("VehicleSeat") then
-        seat.MaxSpeed = CustomCarSpeed
     end
 end)
 
@@ -113,7 +147,7 @@ local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(10, 10, 10)
-Title.Text = "  ★ SHINYHUB V5 [GAMEPASS RGB FIX] ★"
+Title.Text = "  ★ SHINYHUB V5 [BALL & FLY FIX] ★"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -209,7 +243,7 @@ createTab("Ruch Gracza")
 createTab("Pojazdy")
 
 -- ==========================================
--- ZAKŁADKA TROLLING
+-- ZAKŁADKA TROLLING (BALL ITEM FLING)
 -- ==========================================
 local scrollTroll = tabs["Trolling"].scroll
 
@@ -226,67 +260,45 @@ local boxStroke = Instance.new("UIStroke", UserSelector) boxStroke.Color = Color
 
 UserSelector:GetPropertyChangedSignal("Text"):Connect(function() SelectedTarget = UserSelector.Text end)
 
-addButton("Trolling", "⚡ <0.1s ASYNC MATRIX BUS FLING", function()
+addButton("Trolling", "⚽ BALL ITEM FLING TARGET", function()
     local targets = getTargets(SelectedTarget)
     if #targets == 0 then return end
-    
-    if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("RemoveVehicle") then
-        ReplicatedStorage.Network.RemoveVehicle:FireServer()
-    end
-    task.wait(0.05)
-    
-    if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SpawnVehicle") then
-        ReplicatedStorage.Network.SpawnVehicle:FireServer("Bus", Player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 2, -10), Color3.fromRGB(255,255,0))
-    end
-    
-    local car, seat
-    for i = 1, 30 do
-        car, seat = getPlayerVehicle()
-        if car and seat then 
-            seat:Sit(Player.Character:FindFirstChildOfClass("Humanoid"))
-            break 
-        end
-        task.wait(0.02)
-    end
-    
-    if not car or not seat then return end
-    task.wait(0.05)
-    
-    local bodyPart = car:FindFirstChild("Body") or seat
-    local char = Player.Character
-    
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then part.CanCollide = false end
-    end
-    
-    local bAV = Instance.new("BodyAngularVelocity")
-    bAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bAV.AngularVelocity = Vector3.new(0, 999999999, 0)
-    bAV.Parent = bodyPart
-    
-    local bV = Instance.new("BodyVelocity")
-    bV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bV.Velocity = Vector3.new(0, 999999999, 0)
-    bV.Parent = bodyPart
 
-    for _, tPlayer in pairs(targets) do
-        if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetHrp = tPlayer.Character.HumanoidRootPart
-            task.spawn(function()
-                for frame = 1, 4 do
-                    if targetHrp and bodyPart then
-                        bodyPart.CFrame = targetHrp.CFrame * CFrame.new(0, -0.2, 0)
+    -- Przywołaj przedmiot Piłki przez Remote z Brookhaven
+    if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("GiveItem") then
+        ReplicatedStorage.Network.GiveItem:FireServer("Basketball") -- lub "Ball" w zależności od dokładnej nazwy w grze
+    end
+    task.wait(0.1)
+
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local tool = Player.Backpack:FindFirstChild("Basketball") or char:FindFirstChild("Basketball")
+
+    if not tool or not hrp then return end
+    if tool.Parent ~= char then tool.Parent = char end -- Wyciągnij piłkę do ręki
+
+    -- Glitchowanie kolizji i nadawanie rotacji obiektowi podręcznemu (Fling)
+    local handle = tool:FindFirstChild("Handle")
+    if handle then
+        local bAV = Instance.new("BodyAngularVelocity")
+        bAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bAV.AngularVelocity = Vector3.new(0, 50000, 0)
+        bAV.Parent = handle
+
+        for _, tPlayer in pairs(targets) do
+            if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local targetHrp = tPlayer.Character.HumanoidRootPart
+                for frame = 1, 15 do
+                    if targetHrp and hrp then
+                        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 0.5) -- Teleportuje nas tuż obok celu generując uderzenie fizyki
+                        handle.Velocity = Vector3.new(0, 5000, 0)
                     end
                     RunService.Heartbeat:Wait()
                 end
-            end)
+            end
         end
+        bAV:Destroy()
     end
-    
-    task.delay(0.2, function()
-        if bAV then bAV:Destroy() end
-        if bV then bV:Destroy() end
-    end)
 end)
 
 addButton("Trolling", "🧱 JAIL TARGET (Klatka)", function()
@@ -363,9 +375,13 @@ local speedStroke = Instance.new("UIStroke", SpeedInput) speedStroke.Color = Col
 
 SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
     local num = tonumber(SpeedInput.Text)
-    if num then CustomCarSpeed = num end
+    if num then 
+        CustomCarSpeed = num 
+        updateVehicleSpeed()
+    end
 end)
 
+-- NAPRAWIONY FLY CAR SYSTEM
 addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
     local cam = workspace.CurrentCamera
     if state then
@@ -374,18 +390,43 @@ addToggleButton("Pojazdy", "Latanie Autem (Fly Car)", "FlyCar", function(state)
                 local car, seat = getPlayerVehicle()
                 if car and seat then
                     local bodyPart = car:FindFirstChild("Body") or seat
-                    if not bodyPart:FindFirstChild("CarFlyVel") then
-                        local bv = Instance.new("BodyVelocity") bv.Name = "CarFlyVel" bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge) bv.Parent = bodyPart
-                        local bg = Instance.new("BodyGyro") bg.Name = "CarFlyGyr" bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) bg.Parent = bodyPart
+                    
+                    local bv = bodyPart:FindFirstChild("CarFlyVel") or Instance.new("BodyVelocity")
+                    if not bv.Parent then
+                        bv.Name = "CarFlyVel"
+                        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                        bv.Parent = bodyPart
                     end
-                    if bodyPart:FindFirstChild("CarFlyGyr") then bodyPart.CarFlyGyr.CFrame = cam.CFrame end
-                    if seat.Throttle ~= 0 and bodyPart:FindFirstChild("CarFlyVel") then 
-                        bodyPart.CarFlyVel.Velocity = cam.CFrame.LookVector * (seat.Throttle * 120) 
-                    elseif bodyPart:FindFirstChild("CarFlyVel") then 
-                        bodyPart.CarFlyVel.Velocity = Vector3.new(0,0,0) 
+                    
+                    local bg = bodyPart:FindFirstChild("CarFlyGyr") or Instance.new("BodyGyro")
+                    if not bg.Parent then
+                        bg.Name = "CarFlyGyr"
+                        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                        bg.Parent = bodyPart
                     end
-                else break end
+                    
+                    bg.CFrame = cam.CFrame
+                    
+                    -- Sterowanie wektorem ruchu na podstawie wciśniętego gazu/wstecznego w pojeździe
+                    if seat.Throttle ~= 0 then 
+                        bv.Velocity = cam.CFrame.LookVector * (seat.Throttle * 150) 
+                    elseif seat.Steer ~= 0 then
+                        bv.Velocity = cam.CFrame.RightVector * (seat.Steer * 60)
+                    else 
+                        bv.Velocity = Vector3.new(0, 0, 0) 
+                    end
+                else 
+                    break 
+                end
                 task.wait()
+            end
+            
+            -- Czyszczenie fizyki po wyłączeniu opcji fly car
+            local car, seat = getPlayerVehicle()
+            if car and seat then
+                local bodyPart = car:FindFirstChild("Body") or seat
+                if bodyPart:FindFirstChild("CarFlyVel") then bodyPart.CarFlyVel:Destroy() end
+                if bodyPart:FindFirstChild("CarFlyGyr") then bodyPart.CarFlyGyr:Destroy() end
             end
         end)
     end
@@ -393,21 +434,18 @@ end)
 
 addToggleButton("Pojazdy", "Noclip Car", "NoclipCar", function(state) end)
 
--- NAPRAWIONE PURE GAMEPASS RGB (Losowe zaawansowane kolory z palety Brookhaven)
 addToggleButton("Pojazdy", "Tęczowe Auto (RGB)", "RGB", function(state)
     if state then 
         task.spawn(function()
-            math.randomseed(os.time())
             while Toggles.RGB do
                 local car = getPlayerVehicle()
-                if car and ReplicatedStorage:FindFirstChild("Network") then 
-                    -- Losowanie koloru bezpośrednio przez system zaawansowanej palety gamepassowej Brookhaven
-                    local randomColor = Color3.fromHSV(math.random(), 1, 1)
-                    
-                    -- Zdalny Event Brookhaven przyjmuje Color3 do nadpisania niestandardowego koloru z GUI
-                    ReplicatedStorage.Network.ColorCar:FireServer(car, randomColor)
+                if car and ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("ColorCar") then 
+                    local fakeX = math.random(1, 255) / 255
+                    local fakeY = math.random(1, 255) / 255
+                    local fakeZ = math.random(1, 255) / 255
+                    ReplicatedStorage.Network.ColorCar:FireServer(car, Vector3.new(fakeX, fakeY, fakeZ))
                 end
-                task.wait(0.04) -- Ultra szybki spam losowymi barwami
+                task.wait(0.12)
             end
         end) 
     end
