@@ -1,7 +1,7 @@
 --[[
-    ShinyHub V5 - School Bus INSTANT FLING Edition (2026)
-    - RAPID TELEPORT: Ekstremalnie szybkie przeskakiwanie między graczami, zanim zdążą zareagować.
-    - AUTOMATIC SCHOOL BUS SPAWN: Skrypt sam spawnuje autobus i wsadza Cię do niego.
+    ShinyHub V5 - ULTRA INSTANT SIMULTANEOUS FLING (2026)
+    - MULTI-TARGET INSTANT TELEPORT: Uderza we wszystkie cele praktycznie w jednej klatce.
+    - MAXIMUM KINETIC ENERGY: Ekstremalny obrót fizyki autobusu szkolnego.
 ]]
 
 local Players = game:GetService("Players")
@@ -71,7 +71,7 @@ RunService.Stepped:Connect(function()
 end)
 
 -- ==========================================
--- INTERFEJS GRAFICZNY
+-- INTERFEJS GRAFICZNY (CZARNY / ŻÓŁTY NEON)
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ShinyHubPremium"
@@ -115,7 +115,7 @@ local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 Title.TextColor3 = Color3.fromRGB(10, 10, 10)
-Title.Text = "  ★ SHINYHUB V5 [INSTANT BUS FLING] ★"
+Title.Text = "  ★ SHINYHUB V5 [MEGA FAST FLING] ★"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -211,7 +211,7 @@ createTab("Ruch Gracza")
 createTab("Pojazdy")
 
 -- ==========================================
--- ZAKŁADKA TROLLING (BŁYSKAWICZNY ATTACK)
+-- ZAKŁADKA TROLLING (SYMULTANICZNY FLING)
 -- ==========================================
 local scrollTroll = tabs["Trolling"].scroll
 
@@ -228,14 +228,14 @@ local boxStroke = Instance.new("UIStroke", UserSelector) boxStroke.Color = Color
 
 UserSelector:GetPropertyChangedSignal("Text"):Connect(function() SelectedTarget = UserSelector.Text end)
 
-addButton("Trolling", "🚌 INSTANT BUS MASS FLING", function()
+addButton("Trolling", "💥 ULTRA SIMULTANEOUS BUS FLING", function()
     local targets = getTargets(SelectedTarget)
     if #targets == 0 then return end
     
     if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("RemoveVehicle") then
         ReplicatedStorage.Network.RemoveVehicle:FireServer()
     end
-    task.wait(0.15)
+    task.wait(0.1)
     
     if ReplicatedStorage:FindFirstChild("Network") and ReplicatedStorage.Network:FindFirstChild("SpawnVehicle") then
         ReplicatedStorage.Network.SpawnVehicle:FireServer("Bus", Player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 2, -10), Color3.fromRGB(255,255,0))
@@ -248,11 +248,11 @@ addButton("Trolling", "🚌 INSTANT BUS MASS FLING", function()
             seat:Sit(Player.Character:FindFirstChildOfClass("Humanoid"))
             break 
         end
-        task.wait(0.05)
+        task.wait(0.04)
     end
     
     if not car or not seat then return end
-    task.wait(0.2)
+    task.wait(0.1)
     
     local bodyPart = car:FindFirstChild("Body") or seat
     local char = Player.Character
@@ -261,7 +261,7 @@ addButton("Trolling", "🚌 INSTANT BUS MASS FLING", function()
         if part:IsA("BasePart") then part.CanCollide = false end
     end
     
-    -- Agresywne wartości fizyki rotacyjnej (natychmiastowy fling)
+    -- Agresywne wymuszenie rotacji serwerowej
     local bAV = Instance.new("BodyAngularVelocity")
     bAV.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bAV.AngularVelocity = Vector3.new(0, 9999999, 0)
@@ -272,22 +272,23 @@ addButton("Trolling", "🚌 INSTANT BUS MASS FLING", function()
     bV.Velocity = Vector3.new(0, 0, 0)
     bV.Parent = bodyPart
 
-    -- Błyskawiczna pętla rażenia: uderzenie trwa tylko ułamek sekundy na gracza
-    for _, tPlayer in pairs(targets) do
-        if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetHrp = tPlayer.Character.HumanoidRootPart
-            -- Zredukowane do 6 szybkich powtórzeń (bardzo szybki przeskok)
-            for i = 1, 6 do
-                if targetHrp and bodyPart then
-                    bodyPart.CFrame = targetHrp.CFrame * CFrame.new(0, -1, 0)
+    -- Pętla masowa: Teleportuje w jednej klatce do każdego po kolei przez 15 cykli
+    task.spawn(function()
+        for cycle = 1, 15 do
+            for _, tPlayer in pairs(targets) do
+                if tPlayer.Character and tPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetHrp = tPlayer.Character.HumanoidRootPart
+                    if targetHrp and bodyPart then
+                        bodyPart.CFrame = targetHrp.CFrame * CFrame.new(0, -0.5, 0)
+                    end
                 end
-                RunService.Heartbeat:Wait() -- Synchronizacja z fizyką gry zamiast stałego task.wait
             end
+            RunService.Heartbeat:Wait() -- Zmiana pozycji natychmiast co odświeżenie fizyki
         end
-    end
-    
-    bAV:Destroy()
-    bV:Destroy()
+        
+        bAV:Destroy()
+        bV:Destroy()
+    end)
 end)
 
 addButton("Trolling", "🧱 JAIL TARGET (Klatka)", function()
